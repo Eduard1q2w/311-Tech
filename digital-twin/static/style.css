@@ -1,0 +1,356 @@
+:root {
+    --bg: #0d0f12;
+    --panel: #141820;
+    --card: #1c2130;
+    --border: #2a3045;
+    --accent: #00d4ff;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --ok: #22c55e;
+    --text: #e2e8f0;
+    --text-dim: #64748b;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+#app-header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    padding: 12px 20px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+}
+
+#app-header h1 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text);
+}
+
+#app-subtitle {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+#dashboard {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    padding: 12px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 12px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+#left-panel {
+    flex: 0 0 25%;
+}
+
+#center-panel {
+    flex: 1 1 50%;
+}
+
+#right-panel {
+    flex: 0 0 25%;
+}
+
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.card h2 {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.axis-row {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: baseline;
+    gap: 12px;
+    padding: 6px 0;
+    border-top: 1px solid rgba(42, 48, 69, 0.5);
+}
+
+.axis-row:first-of-type {
+    border-top: none;
+    padding-top: 2px;
+}
+
+.axis-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+}
+
+.axis-value {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    line-height: 1.1;
+}
+
+.axis-unit {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+}
+
+.status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background-color: var(--danger);
+    transition: background-color 200ms ease, box-shadow 200ms ease;
+}
+
+.status-disconnected {
+    background-color: var(--danger);
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.55);
+}
+
+.status-connected {
+    background-color: var(--ok);
+    box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+}
+
+.status-warning {
+    background-color: var(--warning);
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.55);
+}
+
+#status-text {
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    color: var(--text);
+}
+
+.rate-row,
+.tilt-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 2px 0;
+}
+
+.rate-value,
+.tilt-value {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+}
+
+.rate-unit,
+.tilt-unit {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+}
+
+#reset-peaks {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+#reset-peaks:hover {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+}
+
+#reset-peaks:active {
+    transform: translateY(1px);
+}
+
+#reset-peaks:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+#building-canvas {
+    flex: 1 1 auto;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
+}
+
+#canvas-placeholder {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-align: center;
+    padding: 20px;
+}
+
+#sparkline-container {
+    width: 100%;
+    height: 48px;
+    color: var(--accent);
+    display: block;
+    overflow: visible;
+}
+
+#sparkline-container svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+#card-sway {
+    gap: 10px;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--panel);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #3a4159;
+}
+
+@media (max-width: 768px) {
+    html,
+    body {
+        overflow: auto;
+        height: auto;
+    }
+
+    #app-header {
+        padding: 10px 14px;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    #dashboard {
+        flex-direction: column;
+        padding: 8px;
+        gap: 8px;
+    }
+
+    #left-panel,
+    #center-panel,
+    #right-panel {
+        flex: 1 1 auto;
+        width: 100%;
+    }
+
+    #building-canvas {
+        min-height: 280px;
+    }
+
+    .axis-value,
+    .rate-value,
+    .tilt-value {
+        font-size: 24px;
+    }
+
+    .card {
+        padding: 14px;
+    }
+}

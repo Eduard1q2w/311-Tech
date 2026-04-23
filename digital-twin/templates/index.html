@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predictive Digital Twin</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <header id="app-header">
+        <h1>Predictive Digital Twin</h1>
+        <span id="app-subtitle">MPU6050 &bull; Live telemetry</span>
+    </header>
+
+    <div id="dashboard">
+
+        <aside id="left-panel" class="panel">
+
+            <section class="card" id="card-acceleration">
+                <h2>Acceleration</h2>
+                <div class="axis-row">
+                    <span class="axis-label">X</span>
+                    <span class="axis-value" id="val-x">0.00</span>
+                    <span class="axis-unit">g</span>
+                </div>
+                <div class="axis-row">
+                    <span class="axis-label">Y</span>
+                    <span class="axis-value" id="val-y">0.00</span>
+                    <span class="axis-unit">g</span>
+                </div>
+                <div class="axis-row">
+                    <span class="axis-label">Z</span>
+                    <span class="axis-value" id="val-z">0.00</span>
+                    <span class="axis-unit">g</span>
+                </div>
+            </section>
+
+            <section class="card" id="card-connection">
+                <h2>Connection status</h2>
+                <div class="status-row">
+                    <span id="status-dot" class="status-dot status-disconnected"></span>
+                    <span id="status-text">Disconnected</span>
+                </div>
+            </section>
+
+            <section class="card" id="card-rate">
+                <h2>Sample rate</h2>
+                <div class="rate-row">
+                    <span class="rate-value" id="val-hz">0</span>
+                    <span class="rate-unit">Hz</span>
+                </div>
+            </section>
+
+        </aside>
+
+        <main id="center-panel" class="panel">
+            <div id="building-canvas">
+                <div id="canvas-placeholder">3D model loads in Phase 3</div>
+            </div>
+        </main>
+
+        <aside id="right-panel" class="panel">
+
+            <section class="card" id="card-peaks">
+                <div class="card-header">
+                    <h2>Peak values</h2>
+                    <button id="reset-peaks" type="button">Reset</button>
+                </div>
+                <div class="axis-row">
+                    <span class="axis-label">X</span>
+                    <span class="axis-value" id="peak-x">0.0000</span>
+                    <span class="axis-unit">g</span>
+                </div>
+                <div class="axis-row">
+                    <span class="axis-label">Y</span>
+                    <span class="axis-value" id="peak-y">0.0000</span>
+                    <span class="axis-unit">g</span>
+                </div>
+                <div class="axis-row">
+                    <span class="axis-label">Z</span>
+                    <span class="axis-value" id="peak-z">0.0000</span>
+                    <span class="axis-unit">g</span>
+                </div>
+            </section>
+
+            <section class="card" id="card-tilt">
+                <h2>Tilt angle</h2>
+                <div class="tilt-row">
+                    <span class="tilt-value" id="val-tilt">0.0</span>
+                    <span class="tilt-unit">&deg;</span>
+                </div>
+            </section>
+
+            <section class="card" id="card-sway">
+                <h2>Sway history</h2>
+                <div id="sparkline-container" aria-label="Sway history sparkline"></div>
+            </section>
+
+        </aside>
+
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
