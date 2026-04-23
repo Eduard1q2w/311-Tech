@@ -2,21 +2,32 @@ import eventlet
 eventlet.monkey_patch()
 
 import socket
-import threading
 import time
-import queue as _queue
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 from flask_socketio import SocketIO
 
+import twin_state
+from twin_state import state
+
 import sensor_reader
+import sensor_processor
+import material_db
+import stress_model
+import scenario_engine
+import predictor
+
+try:
+    import mechanics_engine
+    _has_mechanics = True
+except ImportError:
+    _has_mechanics = False
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "digital-twin-dev"
 socketio = SocketIO(app, async_mode="eventlet", cors_allowed_origins="*")
 
-_latest_lock = threading.Lock()
-_latest_reading = {"x": 0.0, "y": 0.0, "z": 0.0, "timestamp": 0}
+BROADCAST_INTERVAL = 0.05
 
 
 def _get_local_ip():
@@ -32,23 +43,10 @@ def _get_local_ip():
 
 
 def _broadcast_loop():
-    global _latest_reading
     while not sensor_reader.stop_event.is_set():
-        try:
-            reading = sensor_reader.data_queue.get(timeout=0.5)
-        except _queue.Empty:
-            socketio.sleep(0)
-            continue
-        payload = {
-            "x": reading["x"],
-            "y": reading["y"],
-            "z": reading["z"],
-            "timestamp": int(time.time() * 1000),
-        }
-        with _latest_lock:
-            _latest_reading = payload
+        payload = state.to_dict()
         socketio.emit("sensor_data", payload)
-        socketio.sleep(0)
+        socketio.sleep(BROADCAST_INTERVAL)
 
 
 @app.route("/")
@@ -58,22 +56,104 @@ def index():
 
 @app.route("/api/data")
 def api_data():
-    with _latest_lock:
-        snapshot = dict(_latest_reading)
-    return jsonify(snapshot)
+    return jsonify(state.to_dict())
+
+
+@app.route("/api/material", methods=["POST"])
+def api_set_material():
+    body = request.get_json(force=True)
+    name = body.get("material", "")
+    try:
+        material_db.set_active(name)
+        mat = material_db.get_active()
+        return jsonify({"status": "ok", "active_material": mat.name})
+    except ValueError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+@app.route("/api/scenario", methods=["POST"])
+def api_set_scenario():
+    body = request.get_json(force=True)
+    name = body.pop("scenario", "")
+    try:
+        result = scenario_engine.set_active_scenario(name, **body)
+        return jsonify({"status": "ok", "result": result.to_dict()})
+    except ValueError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+@app.route("/api/scenario", methods=["DELETE"])
+def api_clear_scenario():
+    scenario_engine.clear_scenario()
+    return jsonify({"status": "ok", "scenario_active": "none"})
+
+
+@app.route("/api/scenario/all")
+def api_all_scenarios():
+    results = scenario_engine.run_all_scenarios()
+    return jsonify({
+        name: r.to_dict() for name, r in results.items()
+    })
+
+
+@app.route("/api/calibrate", methods=["POST"])
+def api_calibrate():
+    result = sensor_processor.recalibrate()
+    return jsonify({"status": "ok", "calibration": result})
+
+
+@app.route("/api/reset_damage", methods=["POST"])
+def api_reset_damage():
+    stress_model.reset_damage()
+    predictor.reset_baseline()
+    return jsonify({"status": "ok", "damage_percent": 0.0, "integrity_score": 100.0})
 
 
 @socketio.on("connect")
 def _on_connect():
-    with _latest_lock:
-        snapshot = dict(_latest_reading)
-    socketio.emit("sensor_data", snapshot)
+    socketio.emit("sensor_data", state.to_dict())
+
+
+def _start_all_layers():
+    print("  [1/8] twin_state ........... loaded")
+
+    print("  [2/8] sensor_reader ........ loaded (thread auto-started)")
+
+    sensor_processor.start()
+    print("  [3/8] sensor_processor ..... started")
+
+    if _has_mechanics:
+        mechanics_engine.start()
+        print("  [4/8] mechanics_engine ..... started")
+    else:
+        print("  [4/8] mechanics_engine ..... not found (skipped)")
+
+    material_db.set_active("reinforced_concrete")
+    print("  [5/8] material_db .......... loaded (active: reinforced_concrete)")
+
+    stress_model.start()
+    print("  [6/8] stress_model ......... started")
+
+    print("  [7/8] scenario_engine ...... loaded (on-demand)")
+
+    predictor.start()
+    print("  [8/8] predictor ............ started")
 
 
 if __name__ == "__main__":
     ip = _get_local_ip()
     print("=" * 60)
-    print(" Predictive Digital Twin server")
+    print(" Predictive Digital Twin — Full Stack Server")
+    print("=" * 60)
+
+    _start_all_layers()
+
+    print("-" * 60)
+    mat = material_db.get_active()
+    print(f"  Active material : {mat.name}")
+    print(f"  Yield strength  : {mat.yield_strength} MPa")
+    print(f"  Elastic modulus : {mat.elastic_modulus} GPa")
+    print("-" * 60)
     print(f"  Local:   http://127.0.0.1:5000")
     print(f"  Network: http://{ip}:5000")
     print("=" * 60)
@@ -86,6 +166,11 @@ if __name__ == "__main__":
         print("\nShutting down...")
     finally:
         sensor_reader.stop_event.set()
+        stress_model.stop()
+        predictor.stop()
+        sensor_processor.stop()
+        if _has_mechanics:
+            mechanics_engine.stop()
         try:
             sensor_reader.sensor_thread.join(timeout=1.0)
         except Exception:

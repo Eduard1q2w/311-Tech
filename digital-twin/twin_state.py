@@ -41,6 +41,7 @@ class TwinState:
     alert_tier: str = "nominal"
     forecast_24h: List[float] = field(default_factory=lambda: [100.0] * 24)
     evacuation_flag: bool = False
+    resonance_warning: bool = False
 
     def __post_init__(self):
         self._lock = RLock()
