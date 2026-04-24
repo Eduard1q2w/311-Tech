@@ -42,14 +42,20 @@ def _collect_samples(n, timeout_s=CALIBRATION_TIMEOUT_S):
 def recalibrate(samples=CALIBRATION_SAMPLES):
     new_offset, collected = _collect_samples(samples)
     with _state_lock:
-        _offset["x"] = new_offset["x"]
-        _offset["y"] = new_offset["y"]
-        _offset["z"] = new_offset["z"]
-        _filtered["x"] = 0.0
-        _filtered["y"] = 0.0
-        _filtered["z"] = 0.0
+        for axis in ["x", "y", "z"]:
+            val = new_offset[axis]
+            # MPU6050 reads 1g on the vertical axis. We want to calibrate to 0 tilt,
+            # meaning we expect 1g (or -1g) on the dominant vertical axis.
+            if val > 0.5:
+                _offset[axis] = val - 1.0
+            elif val < -0.5:
+                _offset[axis] = val + 1.0
+            else:
+                _offset[axis] = val
+            # Initialize filter to the calibrated baseline
+            _filtered[axis] = new_offset[axis] - _offset[axis]
     _calibrated.set()
-    return {"offset": dict(new_offset), "samples": collected}
+    return {"offset": dict(_offset), "samples": collected}
 
 
 def _process_sample(reading):
@@ -71,6 +77,12 @@ def _process_sample(reading):
 
     tilt_x = round(math.atan2(fy, fz) * 180.0 / math.pi, 2)
     tilt_y = round(math.atan2(fx, fz) * 180.0 / math.pi, 2)
+
+    # Deadband to make it "less sensible" when nearly stationary and upright
+    if abs(tilt_x) < 0.5:
+        tilt_x = 0.0
+    if abs(tilt_y) < 0.5:
+        tilt_y = 0.0
 
     state.update(
         ax=round(fx, 4),
