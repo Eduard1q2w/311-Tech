@@ -88,6 +88,9 @@ def _compute_dominant_frequency():
         return 0.0
     arr = np.array(_ax_ring, dtype=np.float64)
     arr = arr - np.mean(arr)
+    rms = float(np.sqrt(np.mean(arr * arr)))
+    if rms < NOISE_FLOOR_G:
+        return 0.0
     window = np.hanning(FFT_BUFFER_SIZE)
     arr = arr * window
     spectrum = np.fft.rfft(arr)

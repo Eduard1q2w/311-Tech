@@ -22,6 +22,12 @@ _thread = None
 _history_lock = threading.Lock()
 _damage_history = deque()
 
+_peak_lock = threading.Lock()
+_peak_penalty_stress = 0.0
+_peak_penalty_freq = 0.0
+_peak_penalty_tilt = 0.0
+_peak_penalty_disp = 0.0
+
 
 def _record_damage_sample(now_s, damage_frac):
     _damage_history.append((now_s, damage_frac))
@@ -114,11 +120,27 @@ def _compute_integrity(snap):
     displacement_mm = max(0.0, float(snap.lateral_displacement))
     disp_limit_mm = max(1e-6, _disp_limit_mm(snap))
 
-    penalty_stress = min(stress_ratio, 1.0) * 100.0 * w_stress
+    global _peak_penalty_stress, _peak_penalty_freq, _peak_penalty_tilt, _peak_penalty_disp
+
+    live_stress = min(stress_ratio, 1.0) * 100.0 * w_stress
     penalty_fatigue = min(cumulative_damage, 1.0) * 100.0 * w_fatigue
-    penalty_freq = min(freq_shift_pct / FREQ_SHIFT_NORMALIZATION_PCT, 1.0) * 100.0 * w_freq
-    penalty_tilt = min(tilt_magnitude / tilt_critical, 1.0) * 100.0 * w_tilt
-    penalty_disp = min(displacement_mm / disp_limit_mm, 1.0) * 100.0 * w_disp
+    live_freq = min(freq_shift_pct / FREQ_SHIFT_NORMALIZATION_PCT, 1.0) * 100.0 * w_freq
+    live_tilt = min(tilt_magnitude / tilt_critical, 1.0) * 100.0 * w_tilt
+    live_disp = min(displacement_mm / disp_limit_mm, 1.0) * 100.0 * w_disp
+
+    with _peak_lock:
+        if live_stress > _peak_penalty_stress:
+            _peak_penalty_stress = live_stress
+        if live_freq > _peak_penalty_freq:
+            _peak_penalty_freq = live_freq
+        if live_tilt > _peak_penalty_tilt:
+            _peak_penalty_tilt = live_tilt
+        if live_disp > _peak_penalty_disp:
+            _peak_penalty_disp = live_disp
+        penalty_stress = _peak_penalty_stress
+        penalty_freq = _peak_penalty_freq
+        penalty_tilt = _peak_penalty_tilt
+        penalty_disp = _peak_penalty_disp
 
     integrity = 100.0 - penalty_stress - penalty_fatigue - penalty_freq - penalty_tilt - penalty_disp
     integrity = max(0.0, min(100.0, integrity))
@@ -232,8 +254,14 @@ def stop():
 
 
 def reset_baseline():
+    global _peak_penalty_stress, _peak_penalty_freq, _peak_penalty_tilt, _peak_penalty_disp
     with _history_lock:
         _damage_history.clear()
+    with _peak_lock:
+        _peak_penalty_stress = 0.0
+        _peak_penalty_freq = 0.0
+        _peak_penalty_tilt = 0.0
+        _peak_penalty_disp = 0.0
     state.update(
         integrity_score=100.0,
         alert_tier="nominal",

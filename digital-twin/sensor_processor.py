@@ -17,6 +17,7 @@ SAMPLE_RATE_HZ = 20.0
 ACCEL_CUTOFF_HZ = 9.5
 DISPLACEMENT_CUTOFF_HZ = 1.0
 FILTER_ORDER = 2
+TILT_DEADBAND_DEG = 0.10
 
 _offset = {"x": 0.0, "y": 0.0, "z": 0.0}
 _state_lock = threading.Lock()
@@ -160,12 +161,15 @@ def _process_sample(reading):
     denom_y = math.sqrt(fy * fy + fz * fz)
     tilt_x = math.degrees(math.atan2(fy, denom_x)) if denom_x > 1e-9 else 0.0
     tilt_y = math.degrees(math.atan2(-fx, denom_y)) if denom_y > 1e-9 else 0.0
-    tilt_magnitude = math.sqrt(tilt_x * tilt_x + tilt_y * tilt_y)
 
-    if abs(tilt_x) < 0.05:
+    if abs(tilt_x) < TILT_DEADBAND_DEG:
         tilt_x = 0.0
-    if abs(tilt_y) < 0.05:
+    if abs(tilt_y) < TILT_DEADBAND_DEG:
         tilt_y = 0.0
+
+    tilt_magnitude = math.sqrt(tilt_x * tilt_x + tilt_y * tilt_y)
+    if tilt_magnitude < TILT_DEADBAND_DEG:
+        tilt_magnitude = 0.0
 
     alert_deg, severe_deg, critical_deg, disp_limit_mm_val, _H = _compute_tilt_limits()
 

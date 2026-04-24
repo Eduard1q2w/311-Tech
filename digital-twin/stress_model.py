@@ -7,6 +7,7 @@ import material_db
 SAMPLE_RATE = 20.0
 CYCLE_INTERVAL = 1.0 / SAMPLE_RATE
 GRAVITY = 9.81
+ACCEL_DEADBAND_G = 0.002
 
 BUILDING_HEIGHT = 9.9
 CROSS_SECTION_WIDTH = 10.0
@@ -92,6 +93,20 @@ def _compute_cycle():
     acc_x = float(snap.ax)
     acc_y = float(snap.ay)
     acc_peak_g = max(abs(acc_x), abs(acc_y))
+
+    if acc_peak_g < ACCEL_DEADBAND_G:
+        with _damage_lock:
+            _total_cycles += 1
+            damage_frac = _cumulative_damage
+            cycles = _total_cycles
+        state.update(
+            bending_stress=0.0,
+            shear_stress=0.0,
+            stress_ratio=0.0,
+            damage_percent=round(damage_frac * 100.0, 6),
+            fatigue_cycles=cycles,
+        )
+        return
 
     V = mass_total * acc_peak_g * GRAVITY
     M_moment = V * H
