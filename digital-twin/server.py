@@ -124,6 +124,8 @@ def api_all_scenarios():
 @app.route("/api/calibrate", methods=["POST"])
 def api_calibrate():
     result = sensor_processor.recalibrate()
+    stress_model.reset_damage()
+    predictor.reset_baseline()
     return jsonify({"status": "ok", "calibration": result})
 
 

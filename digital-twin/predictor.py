@@ -62,10 +62,17 @@ def _compute_damage_rate_per_hour(snap):
     return 0.0
 
 
-def _compute_ttf(snap, damage_rate_per_hour):
-    if damage_rate_per_hour > 0:
-        remaining = 100.0 - snap.damage_percent
-        ttf = remaining / damage_rate_per_hour
+def _compute_ttf(snap, damage_rate_per_hour, integrity):
+    if snap.scenario_active != "none" and snap.projected_damage_rate > 0:
+        effective_rate = snap.projected_damage_rate
+    else:
+        effective_rate = damage_rate_per_hour
+
+    if effective_rate <= 0 and integrity < 100.0:
+        effective_rate = (100.0 - integrity) * 0.01
+
+    if effective_rate > 0:
+        ttf = integrity / effective_rate
         return round(min(ttf, 9999.0), 1)
     return float("inf")
 
@@ -75,6 +82,9 @@ def _compute_forecast(snap, damage_rate_per_hour, integrity):
         effective_rate = snap.projected_damage_rate
     else:
         effective_rate = damage_rate_per_hour
+
+    if effective_rate <= 0 and integrity < 100.0:
+        effective_rate = (100.0 - integrity) * 0.01
 
     if effective_rate > 0:
         hourly_damage_pct = effective_rate
@@ -96,7 +106,7 @@ def _predict_cycle():
     tier = _compute_alert_tier(integrity)
     resonance = _compute_resonance_warning(snap)
     damage_rate = _compute_damage_rate_per_hour(snap)
-    ttf = _compute_ttf(snap, damage_rate)
+    ttf = _compute_ttf(snap, damage_rate, integrity)
     forecast = _compute_forecast(snap, damage_rate, integrity)
 
     state.update(
