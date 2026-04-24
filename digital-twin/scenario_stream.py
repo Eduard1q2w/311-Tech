@@ -94,10 +94,18 @@ def _run(socketio, kind, scenario_name, params):
     target_stress = result.total_projected_stress
     mat = material_db.get_active()
     yield_s = mat.yield_strength if mat.yield_strength > 0 else 1.0
+    target_ratio_pct = max(0.0, min(1.0, target_stress / yield_s)) * 100.0
     target_disp_mm = baseline_disp + 50.0 * (
         1.0 if kind in ("wind", "seismic") else 0.4
     ) * (target_stress / yield_s)
     target_damage_addl = result.projected_damage_rate_per_hour * (STREAM_DURATION_S / 3600.0)
+
+    state.update(
+        scenario_active=kind,
+        scenario_params=dict(params),
+        projected_stress=round(target_stress, 4),
+        projected_damage_rate=round(result.projected_damage_rate_per_hour, 6),
+    )
 
     n_steps = int(STREAM_DURATION_S / STREAM_INTERVAL_S)
     _emit(socketio, {
@@ -106,7 +114,10 @@ def _run(socketio, kind, scenario_name, params):
         "scenario_full": scenario_name,
         "duration_s": STREAM_DURATION_S,
         "n_steps": n_steps,
-        "target_stress_mpa": target_stress,
+        "target_stress_mpa": round(target_stress, 2),
+        "target_ratio_pct": round(target_ratio_pct, 1),
+        "yield_strength_mpa": round(yield_s, 1),
+        "material": mat.name,
         "target_ttf_hours": None if result.time_to_failure_hours == float("inf")
             else result.time_to_failure_hours,
         "summary": result.summary,
@@ -151,6 +162,13 @@ def _run(socketio, kind, scenario_name, params):
         "scenario": kind,
         "aborted": aborted,
     })
+
+    state.update(
+        scenario_active="none",
+        scenario_params={},
+        projected_stress=0.0,
+        projected_damage_rate=0.0,
+    )
 
     with _lock:
         _active_name = None

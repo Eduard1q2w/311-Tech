@@ -945,6 +945,8 @@
         };
     })();
 
+    const projStatusEl = document.getElementById("val-proj-status");
+
     socket.on("scenario_stream", function (d) {
         if (!d) return;
         if (d.phase === "start") {
@@ -952,6 +954,16 @@
             if (twin3d) twin3d.setScenarioMode(true, d.scenario);
             if (scenarioChart) scenarioChart.reset();
             if (el.scenarioName) el.scenarioName.textContent = d.scenario_full || d.scenario;
+            const tgt = num(d.target_stress_mpa, 0);
+            const yld = num(d.yield_strength_mpa, 0);
+            const ratioPct = num(d.target_ratio_pct, 0);
+            if (el.projStress) el.projStress.textContent = tgt.toFixed(2);
+            if (projStatusEl) {
+                const status = d.safe ? "SAFE" : "EXCEEDS YIELD";
+                const cls = d.safe ? "text-safe" : "text-critical";
+                projStatusEl.textContent = ratioPct.toFixed(1) + "% of yield (" + yld.toFixed(0) + " MPa) — " + status;
+                projStatusEl.className = "kv-value " + cls;
+            }
             return;
         }
         if (d.phase === "frame") {
@@ -988,7 +1000,6 @@
                 el.disp.className = "kv-value " + (dispF > 10 ? "text-critical" : (dispF > 5 ? "text-warning" : "text-safe"));
             }
 
-            if (el.projStress) el.projStress.textContent = bend.toFixed(2);
             const stepEl = document.getElementById("val-scenario-step");
             if (stepEl) stepEl.textContent = d.step + "/" + d.n_steps;
 
@@ -1019,6 +1030,11 @@
             if (twin3d) twin3d.setScenarioMode(false);
             scenarioBtns.forEach(b => b.classList.remove("active"));
             if (el.scenarioName) el.scenarioName.textContent = "none";
+            if (el.projStress) el.projStress.textContent = "0.00";
+            if (projStatusEl) {
+                projStatusEl.textContent = "—";
+                projStatusEl.className = "kv-value";
+            }
         }
     });
 })();
