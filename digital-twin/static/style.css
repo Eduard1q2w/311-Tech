@@ -619,6 +619,152 @@ body {
 .btn-ghost:active,
 .btn-tiny:active { transform: translateY(1px); }
 
+.card-twin3d {
+    padding: 12px;
+    gap: 8px;
+}
+
+.twin3d-mode {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--ok);
+    border: 1px solid var(--ok);
+    text-transform: uppercase;
+}
+
+.twin3d-mode.scenario {
+    background: rgba(245, 158, 11, 0.18);
+    color: var(--warning);
+    border-color: var(--warning);
+}
+
+#twin3d-mount {
+    position: relative;
+    width: 100%;
+    height: 380px;
+    background: #0a0c11;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+#twin3d-canvas-wrap {
+    position: absolute;
+    inset: 0;
+}
+
+#twin3d-canvas-wrap canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.twin3d-sprite {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transition: opacity 300ms ease;
+    pointer-events: none;
+    mix-blend-mode: screen;
+}
+
+.twin3d-sprite.visible {
+    opacity: 0.22;
+}
+
+.twin3d-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    pointer-events: none;
+}
+
+.twin3d-loading.hidden {
+    display: none;
+}
+
+.scenario-controls {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+}
+
+.scenario-btn {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 8px 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 150ms, color 150ms, border-color 150ms;
+}
+
+.scenario-btn:hover {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+}
+
+.scenario-btn.active {
+    background: var(--warning);
+    color: var(--bg);
+    border-color: var(--warning);
+}
+
+.intensity-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+}
+
+#in-intensity {
+    width: 100%;
+    accent-color: var(--accent);
+}
+
+.btn-ghost.danger {
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+.btn-ghost.danger:hover {
+    background: var(--danger);
+    color: var(--bg);
+}
+
+#scenario-chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 160px;
+    margin-top: 8px;
+}
+
+#scenario-chart {
+    width: 100% !important;
+    height: 100% !important;
+}
+
 @media (max-width: 768px) {
     html,
     body {

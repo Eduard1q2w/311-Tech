@@ -6,6 +6,11 @@
     <title>Predictive Digital Twin</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 </head>
 <body>
     <header id="app-header">
@@ -141,6 +146,18 @@
 
         <main id="center-panel" class="panel">
 
+            <section class="card card-twin3d" id="card-twin3d">
+                <div class="card-header">
+                    <h2>3D Digital Twin</h2>
+                    <span class="twin3d-mode" id="twin3d-mode">LIVE</span>
+                </div>
+                <div id="twin3d-mount">
+                    <div id="twin3d-canvas-wrap"></div>
+                    <div id="twin3d-sprite" class="twin3d-sprite" aria-hidden="true"></div>
+                    <div id="twin3d-loading" class="twin3d-loading">Loading building...</div>
+                </div>
+            </section>
+
             <section class="card card-hero" id="card-prediction">
                 <div class="card-header">
                     <h2>Predictive Health (Layer 6)</h2>
@@ -189,50 +206,20 @@
 
             <section class="card" id="card-scenario">
                 <div class="card-header">
-                    <h2>Scenario runner (Layer 5)</h2>
-                    <button id="btn-clear-scenario" class="btn-ghost" type="button">Clear</button>
+                    <h2>Scenario Runner (Layer 5)</h2>
+                    <button id="btn-stop-scenario" class="btn-ghost danger" type="button">Stop</button>
                 </div>
-                <div class="scenario-grid">
-                    <div class="scenario-cell">
-                        <label>Wind</label>
-                        <div class="scenario-input-row">
-                            <input type="number" id="in-wind" value="60" min="0" step="5">
-                            <span class="scenario-unit">km/h</span>
-                            <button class="btn-tiny" data-scenario="wind">Run</button>
-                        </div>
-                    </div>
-                    <div class="scenario-cell">
-                        <label>Seismic</label>
-                        <div class="scenario-input-row">
-                            <input type="number" id="in-mag" value="5.5" min="0" max="10" step="0.1">
-                            <input type="number" id="in-dist" value="30" min="1" step="5">
-                            <button class="btn-tiny" data-scenario="seismic">Run</button>
-                        </div>
-                    </div>
-                    <div class="scenario-cell">
-                        <label>Overload</label>
-                        <div class="scenario-input-row">
-                            <input type="number" id="in-floors" value="2" min="1" step="1">
-                            <input type="number" id="in-occ" value="0.8" min="0" max="1" step="0.1">
-                            <button class="btn-tiny" data-scenario="overload">Run</button>
-                        </div>
-                    </div>
-                    <div class="scenario-cell">
-                        <label>Thermal</label>
-                        <div class="scenario-input-row">
-                            <input type="number" id="in-temp" value="40" step="5">
-                            <span class="scenario-unit">&deg;C</span>
-                            <button class="btn-tiny" data-scenario="thermal">Run</button>
-                        </div>
-                    </div>
-                    <div class="scenario-cell">
-                        <label>Flood</label>
-                        <div class="scenario-input-row">
-                            <input type="number" id="in-depth" value="2" min="0" step="0.5">
-                            <span class="scenario-unit">m</span>
-                            <button class="btn-tiny" data-scenario="flood">Run</button>
-                        </div>
-                    </div>
+                <div class="scenario-controls">
+                    <button class="scenario-btn" data-sim="wind">Wind</button>
+                    <button class="scenario-btn" data-sim="seismic">Seismic</button>
+                    <button class="scenario-btn" data-sim="overload">Overload</button>
+                    <button class="scenario-btn" data-sim="thermal">Thermal</button>
+                    <button class="scenario-btn" data-sim="flood">Flood</button>
+                </div>
+                <div class="intensity-row">
+                    <span class="kv-label">Intensity</span>
+                    <input type="range" id="in-intensity" min="0" max="100" value="50" step="1">
+                    <span class="kv-value" id="val-intensity">0.50</span>
                 </div>
                 <div class="scenario-readout">
                     <div class="kv-row">
@@ -244,6 +231,13 @@
                         <span class="kv-value" id="val-proj-stress">0.00</span>
                         <span class="kv-unit">MPa</span>
                     </div>
+                    <div class="kv-row">
+                        <span class="kv-label">Step</span>
+                        <span class="kv-value" id="val-scenario-step">0/0</span>
+                    </div>
+                </div>
+                <div id="scenario-chart-wrap">
+                    <canvas id="scenario-chart"></canvas>
                 </div>
             </section>
 

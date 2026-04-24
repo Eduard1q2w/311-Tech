@@ -13,6 +13,10 @@ FFT_BUFFER_SIZE = 64
 DRIFT_RESET_SECONDS = 5.0
 CYCLE_INTERVAL = 1.0 / SAMPLE_RATE
 GRAVITY = 9.81
+# Leaky integrator: velocity and displacement decay toward zero each cycle.
+# LEAK_FACTOR < 1.0 means any integrated drift bleeds away when there is no
+# sustained acceleration, so the display converges back to 0 at standstill.
+LEAK_FACTOR = 0.75
 
 _stop_event = threading.Event()
 _thread = None
@@ -115,12 +119,12 @@ def _compute_cycle():
         _displacement_x_m += 0.5 * (v_prev_x + _int_velocity_x_ms) * dt_s
         _displacement_y_m += 0.5 * (v_prev_y + _int_velocity_y_ms) * dt_s
 
-        # Simulate structural restoring force and damping when structure is resting
-        if ax == 0.0 and ay == 0.0:
-            _int_velocity_x_ms *= 0.90
-            _int_velocity_y_ms *= 0.90
-            _displacement_x_m *= 0.90
-            _displacement_y_m *= 0.90
+        motion_mag = math.sqrt(ax ** 2 + ay ** 2)
+        leak = LEAK_FACTOR ** (1.0 + motion_mag * 4.0) 
+        _int_velocity_x_ms *= leak
+        _int_velocity_y_ms *= leak
+        _displacement_x_m  *= leak
+        _displacement_y_m  *= leak
 
         now_s = time.time()
         if now_s - _last_drift_reset_s >= DRIFT_RESET_SECONDS:

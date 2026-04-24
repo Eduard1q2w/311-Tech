@@ -1,6 +1,7 @@
 import eventlet
 eventlet.monkey_patch()
 
+import os
 import socket
 
 from twin_state import state
@@ -9,7 +10,12 @@ import sensor_processor
 import material_db
 import stress_model
 import scenario_engine
+import scenario_stream
 import predictor
+
+ASSETS_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "3ddio")
+)
 
 try:
     import mechanics_engine
@@ -44,7 +50,7 @@ def _start_all_layers():
 
 _start_all_layers()
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_socketio import SocketIO
 
 app = Flask(__name__)
@@ -134,6 +140,28 @@ def api_reset_damage():
     stress_model.reset_damage()
     predictor.reset_baseline()
     return jsonify({"status": "ok", "damage_percent": 0.0, "integrity_score": 100.0})
+
+
+@app.route("/assets/<path:subpath>")
+def api_assets(subpath):
+    return send_from_directory(ASSETS_DIR, subpath)
+
+
+@app.route("/run_scenario", methods=["POST"])
+def api_run_scenario():
+    body = request.get_json(force=True) or {}
+    kind = body.get("scenario", "")
+    intensity = body.get("intensity", 0.5)
+    try:
+        info = scenario_stream.start_scenario(socketio, kind, float(intensity))
+        return jsonify(info)
+    except ValueError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+@app.route("/stop_scenario", methods=["POST"])
+def api_stop_scenario():
+    return jsonify(scenario_stream.stop_scenario())
 
 
 @app.route("/api/dimensions", methods=["POST"])
