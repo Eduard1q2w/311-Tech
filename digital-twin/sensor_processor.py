@@ -84,18 +84,24 @@ def _process_sample(reading):
 
 def _process_loop():
     print("[sensor_processor] calibrating (50 samples)...")
-    result = recalibrate()
-    print(
-        "[sensor_processor] offset set to x={x:+.4f}  y={y:+.4f}  z={z:+.4f}  (n={n})".format(
-            n=result["samples"], **result["offset"]
+    try:
+        result = recalibrate()
+        print(
+            "[sensor_processor] offset set to x={x:+.4f}  y={y:+.4f}  z={z:+.4f}  (n={n})".format(
+                n=result["samples"], **result["offset"]
+            )
         )
-    )
+    except Exception as e:
+        print(f"[sensor_processor] calibration error: {type(e).__name__}: {e}")
     while not _stop_event.is_set():
         try:
             reading = sensor_reader.data_queue.get(timeout=QUEUE_GET_TIMEOUT)
         except queue.Empty:
             continue
-        _process_sample(reading)
+        try:
+            _process_sample(reading)
+        except Exception as e:
+            print(f"[sensor_processor] sample error: {type(e).__name__}: {e}")
 
 
 def start():

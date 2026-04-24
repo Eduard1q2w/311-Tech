@@ -2,14 +2,8 @@ import eventlet
 eventlet.monkey_patch()
 
 import socket
-import time
 
-from flask import Flask, jsonify, render_template, request
-from flask_socketio import SocketIO
-
-import twin_state
 from twin_state import state
-
 import sensor_reader
 import sensor_processor
 import material_db
@@ -20,8 +14,38 @@ import predictor
 try:
     import mechanics_engine
     _has_mechanics = True
-except ImportError:
+except ImportError as e:
+    print(f"[server] mechanics_engine not available: {type(e).__name__}: {e}")
     _has_mechanics = False
+
+
+def _start_all_layers():
+    print("=" * 60)
+    print(" Predictive Digital Twin — booting engineering layers")
+    print("=" * 60)
+    print("  [1/8] twin_state ........... loaded")
+    print("  [2/8] sensor_reader ........ loaded (thread auto-started)")
+    sensor_processor.start()
+    print("  [3/8] sensor_processor ..... started")
+    if _has_mechanics:
+        mechanics_engine.start()
+        print("  [4/8] mechanics_engine ..... started")
+    else:
+        print("  [4/8] mechanics_engine ..... not found (skipped)")
+    material_db.set_active("reinforced_concrete")
+    print("  [5/8] material_db .......... loaded (active: reinforced_concrete)")
+    stress_model.start()
+    print("  [6/8] stress_model ......... started")
+    print("  [7/8] scenario_engine ...... loaded (on-demand)")
+    predictor.start()
+    print("  [8/8] predictor ............ started")
+    print("-" * 60)
+
+
+_start_all_layers()
+
+from flask import Flask, jsonify, render_template, request
+from flask_socketio import SocketIO
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "digital-twin-dev"
@@ -44,8 +68,11 @@ def _get_local_ip():
 
 def _broadcast_loop():
     while not sensor_reader.stop_event.is_set():
-        payload = state.to_dict()
-        socketio.emit("sensor_data", payload)
+        try:
+            payload = state.to_dict()
+            socketio.emit("sensor_data", payload)
+        except Exception as e:
+            print(f"[broadcast] error: {type(e).__name__}: {e}")
         socketio.sleep(BROADCAST_INTERVAL)
 
 
@@ -91,9 +118,7 @@ def api_clear_scenario():
 @app.route("/api/scenario/all")
 def api_all_scenarios():
     results = scenario_engine.run_all_scenarios()
-    return jsonify({
-        name: r.to_dict() for name, r in results.items()
-    })
+    return jsonify({name: r.to_dict() for name, r in results.items()})
 
 
 @app.route("/api/calibrate", methods=["POST"])
@@ -114,41 +139,8 @@ def _on_connect():
     socketio.emit("sensor_data", state.to_dict())
 
 
-def _start_all_layers():
-    print("  [1/8] twin_state ........... loaded")
-
-    print("  [2/8] sensor_reader ........ loaded (thread auto-started)")
-
-    sensor_processor.start()
-    print("  [3/8] sensor_processor ..... started")
-
-    if _has_mechanics:
-        mechanics_engine.start()
-        print("  [4/8] mechanics_engine ..... started")
-    else:
-        print("  [4/8] mechanics_engine ..... not found (skipped)")
-
-    material_db.set_active("reinforced_concrete")
-    print("  [5/8] material_db .......... loaded (active: reinforced_concrete)")
-
-    stress_model.start()
-    print("  [6/8] stress_model ......... started")
-
-    print("  [7/8] scenario_engine ...... loaded (on-demand)")
-
-    predictor.start()
-    print("  [8/8] predictor ............ started")
-
-
 if __name__ == "__main__":
     ip = _get_local_ip()
-    print("=" * 60)
-    print(" Predictive Digital Twin — Full Stack Server")
-    print("=" * 60)
-
-    _start_all_layers()
-
-    print("-" * 60)
     mat = material_db.get_active()
     print(f"  Active material : {mat.name}")
     print(f"  Yield strength  : {mat.yield_strength} MPa")

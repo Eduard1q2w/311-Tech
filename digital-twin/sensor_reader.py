@@ -21,10 +21,20 @@ def _to_signed(value):
 
 
 def _poll_loop():
-    bus = smbus2.SMBus(I2C_BUS)
     try:
-        bus.write_byte_data(MPU6050_ADDR, PWR_MGMT_1, 0x00)
+        bus = smbus2.SMBus(I2C_BUS)
+    except Exception as e:
+        print(f"[sensor_reader] FATAL: cannot open I2C bus {I2C_BUS}: {type(e).__name__}: {e}")
+        return
+    try:
+        try:
+            bus.write_byte_data(MPU6050_ADDR, PWR_MGMT_1, 0x00)
+        except Exception as e:
+            print(f"[sensor_reader] FATAL: MPU6050 wake failed at 0x{MPU6050_ADDR:02x}: {type(e).__name__}: {e}")
+            return
         time.sleep(0.1)
+        print(f"[sensor_reader] polling MPU6050 at 0x{MPU6050_ADDR:02x} on bus {I2C_BUS}")
+        error_count = 0
         while not stop_event.is_set():
             try:
                 block = bus.read_i2c_block_data(MPU6050_ADDR, ACCEL_XOUT_H, 6)
@@ -40,9 +50,18 @@ def _poll_loop():
                 try:
                     data_queue.put_nowait(reading)
                 except queue.Full:
-                    pass
-            except OSError:
-                pass
+                    try:
+                        data_queue.get_nowait()
+                        data_queue.put_nowait(reading)
+                    except Exception:
+                        pass
+                error_count = 0
+            except OSError as e:
+                error_count += 1
+                if error_count <= 3 or error_count % 40 == 0:
+                    print(f"[sensor_reader] I2C read error #{error_count}: {type(e).__name__}: {e}")
+            except Exception as e:
+                print(f"[sensor_reader] unexpected error: {type(e).__name__}: {e}")
             time.sleep(POLL_INTERVAL)
     finally:
         try:

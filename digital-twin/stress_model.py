@@ -66,7 +66,10 @@ def _compute_cycle():
 
 def _stress_loop():
     while not _stop_event.is_set():
-        _compute_cycle()
+        try:
+            _compute_cycle()
+        except Exception as e:
+            print(f"[stress_model] cycle error: {type(e).__name__}: {e}")
         _stop_event.wait(CYCLE_INTERVAL)
 
 

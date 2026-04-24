@@ -39,7 +39,7 @@ class TwinState:
 
     integrity_score: float = 100.0
     alert_tier: str = "nominal"
-    forecast_24h: List[float] = field(default_factory=lambda: [100.0] * 24)
+    forecast_24h: List[float] = field(default_factory=lambda: [100.0] * 25)
     evacuation_flag: bool = False
     resonance_warning: bool = False
 

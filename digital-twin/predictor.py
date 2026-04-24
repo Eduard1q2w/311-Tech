@@ -111,7 +111,10 @@ def _predict_cycle():
 
 def _predict_loop():
     while not _stop_event.is_set():
-        _predict_cycle()
+        try:
+            _predict_cycle()
+        except Exception as e:
+            print(f"[predictor] cycle error: {type(e).__name__}: {e}")
         _stop_event.wait(PREDICT_INTERVAL)
 
 
