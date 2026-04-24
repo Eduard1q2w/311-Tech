@@ -67,8 +67,9 @@ def _compute_cycle():
 
     with _math_lock:
         snap = state.snapshot()
-        ax = snap.ax
-        ay = snap.ay
+        # Apply a deadband to ignore micro-vibrations and stabilize output
+        ax = snap.ax if abs(snap.ax) > 0.015 else 0.0
+        ay = snap.ay if abs(snap.ay) > 0.015 else 0.0
         ts_ms = snap.timestamp
         tilt_x = snap.tilt_x
         tilt_y = snap.tilt_y
@@ -113,6 +114,13 @@ def _compute_cycle():
 
         _displacement_x_m += 0.5 * (v_prev_x + _int_velocity_x_ms) * dt_s
         _displacement_y_m += 0.5 * (v_prev_y + _int_velocity_y_ms) * dt_s
+
+        # Simulate structural restoring force and damping when structure is resting
+        if ax == 0.0 and ay == 0.0:
+            _int_velocity_x_ms *= 0.90
+            _int_velocity_y_ms *= 0.90
+            _displacement_x_m *= 0.90
+            _displacement_y_m *= 0.90
 
         now_s = time.time()
         if now_s - _last_drift_reset_s >= DRIFT_RESET_SECONDS:
