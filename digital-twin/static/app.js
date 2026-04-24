@@ -54,8 +54,6 @@
         ttf: document.getElementById("val-ttf"),
         gaugeRing: document.getElementById("gauge-ring"),
 
-        forecast: document.getElementById("forecast-container"),
-
         scenarioName: document.getElementById("val-scenario"),
         projStress: document.getElementById("val-proj-stress"),
         btnClearScenario: document.getElementById("btn-clear-scenario"),
@@ -63,10 +61,13 @@
         btnCalibrate: document.getElementById("btn-calibrate"),
 
         btnSyncBuilding: document.getElementById("btn-sync-building"),
-        inBHeight: document.getElementById("in-b-height"),
-        inBMass: document.getElementById("in-b-mass"),
+        inBFloors: document.getElementById("in-b-floors"),
+        inBFloorHeight: document.getElementById("in-b-floor-height"),
         inBWidth: document.getElementById("in-b-width"),
         inBDepth: document.getElementById("in-b-depth"),
+        inBStructure: document.getElementById("in-b-structure"),
+        valBHeight: document.getElementById("val-b-height"),
+        valBMass: document.getElementById("val-b-mass"),
         ttfHuman: document.getElementById("val-ttf-human"),
     };
 
@@ -169,31 +170,6 @@
         el.gaugeRing.setAttribute("stroke", tierColor(tier));
     }
 
-    function updateForecast(points) {
-        if (!el.forecast || !Array.isArray(points) || points.length < 2) return;
-        const W = 400, H = 120, pad = 4;
-        const maxVal = 100, minVal = 0;
-        const n = points.length;
-        const step = (W - pad * 2) / (n - 1);
-        const toY = v => pad + (1 - (v - minVal) / (maxVal - minVal)) * (H - pad * 2);
-        const coords = points.map((v, i) => (pad + i * step).toFixed(1) + "," + toY(v).toFixed(1));
-        const strokeColor = tierColor(tierFromScore(points[0]));
-        const grid = [25, 50, 75].map(g => {
-            const y = toY(g).toFixed(1);
-            return '<line x1="' + pad + '" y1="' + y + '" x2="' + (W - pad) + '" y2="' + y +
-                '" stroke="#2a3045" stroke-width="0.5" stroke-dasharray="2 3"/>';
-        }).join("");
-        const area = "M" + coords[0] + " L" + coords.slice(1).join(" L") +
-            " L" + (W - pad) + "," + (H - pad) + " L" + pad + "," + (H - pad) + " Z";
-        el.forecast.innerHTML =
-            '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
-            grid +
-            '<path d="' + area + '" fill="' + strokeColor + '" fill-opacity="0.12"/>' +
-            '<polyline points="' + coords.join(" ") + '" fill="none" stroke="' + strokeColor +
-            '" stroke-width="1.8" vector-effect="non-scaling-stroke"/>' +
-            '</svg>';
-    }
-
     function tickSampleRate() {
         if (el.valHz) el.valHz.textContent = String(local.packetCount);
         local.packetCount = 0;
@@ -270,18 +246,49 @@
         });
     }
 
+    const STRUCT_DENSITY = {
+        concrete: 420.0,
+        steel:    220.0,
+        masonry:  550.0,
+        timber:   160.0,
+    };
+
+    function buildingSpec() {
+        const floors = Math.max(1, parseInt(el.inBFloors && el.inBFloors.value, 10) || 1);
+        const floorH = Math.max(2.0, parseFloat(el.inBFloorHeight && el.inBFloorHeight.value) || 3.3);
+        const width  = Math.max(1.0, parseFloat(el.inBWidth && el.inBWidth.value) || 10.0);
+        const depth  = Math.max(1.0, parseFloat(el.inBDepth && el.inBDepth.value) || 10.0);
+        const stype  = (el.inBStructure && el.inBStructure.value) || "concrete";
+        const density = STRUCT_DENSITY[stype] || STRUCT_DENSITY.concrete;
+        const height = floors * floorH;
+        const mass = width * depth * height * density;
+        return { floors, floorH, width, depth, stype, height, mass };
+    }
+
+    function repaintBuildingSpec() {
+        const s = buildingSpec();
+        if (el.valBHeight) el.valBHeight.textContent = s.height.toFixed(1);
+        if (el.valBMass) el.valBMass.textContent = (s.mass / 1000).toFixed(1);
+    }
+
+    [el.inBFloors, el.inBFloorHeight, el.inBWidth, el.inBDepth, el.inBStructure].forEach(inp => {
+        if (inp) inp.addEventListener("input", repaintBuildingSpec);
+    });
+    repaintBuildingSpec();
+
     if (el.btnSyncBuilding) {
         el.btnSyncBuilding.addEventListener("click", () => {
+            const s = buildingSpec();
             const body = {
-                height: parseFloat(el.inBHeight.value),
-                mass: parseFloat(el.inBMass.value),
-                width: parseFloat(el.inBWidth.value),
-                depth: parseFloat(el.inBDepth.value)
+                height: s.height,
+                mass: s.mass,
+                width: s.width,
+                depth: s.depth,
             };
             apiPost("/api/dimensions", body).then(res => {
                 if (res.status === "ok") {
                     el.btnSyncBuilding.textContent = "Synced!";
-                    setTimeout(() => el.btnSyncBuilding.textContent = "Sync to Twin", 2000);
+                    setTimeout(() => el.btnSyncBuilding.textContent = "Sync to Twin", 1500);
                 }
             }).catch(console.error);
         });
@@ -401,8 +408,6 @@
             }
         }
 
-        if (Array.isArray(d.forecast_24h)) updateForecast(d.forecast_24h);
-
         if (typeof d.scenario_active === "string") {
             if (el.scenarioName) el.scenarioName.textContent = d.scenario_active;
         }
@@ -427,7 +432,6 @@
     const twin3d = (function initThreeD() {
         const mount = document.getElementById("twin3d-canvas-wrap");
         const loadingEl = document.getElementById("twin3d-loading");
-        const spriteEl = document.getElementById("twin3d-sprite");
         if (!mount || !window.THREE) {
             if (loadingEl) loadingEl.textContent = "Three.js unavailable";
             return null;
@@ -534,9 +538,9 @@
         window.addEventListener("resize", resize);
         setTimeout(resize, 50);
 
-        const TILT_AMP = 3.0;
-        const SHEAR_MAX = 0.25;
-        const SHAKE_MAX = 0.15;
+        const TILT_AMP = 0.9;
+        const SHEAR_MAX = 0.06;
+        const SHAKE_MAX = 0.04;
         let smoothed = { tiltX: 0, tiltY: 0, integrity: 100, damage: 0 };
 
         function lerp(a, b, t) { return a + (b - a) * t; }
@@ -588,28 +592,28 @@
             const dt = clock.getDelta();
             const now = clock.elapsedTime;
 
-            smoothed.tiltX = lerp(smoothed.tiltX, displayState.tiltX, 0.12);
-            smoothed.tiltY = lerp(smoothed.tiltY, displayState.tiltY, 0.12);
-            smoothed.integrity = lerp(smoothed.integrity, displayState.integrity, 0.08);
-            smoothed.damage = lerp(smoothed.damage, displayState.damage, 0.04);
+            smoothed.tiltX = lerp(smoothed.tiltX, displayState.tiltX, 0.06);
+            smoothed.tiltY = lerp(smoothed.tiltY, displayState.tiltY, 0.06);
+            smoothed.integrity = lerp(smoothed.integrity, displayState.integrity, 0.05);
+            smoothed.damage = lerp(smoothed.damage, displayState.damage, 0.03);
 
             const tiltXRad = (smoothed.tiltY * Math.PI / 180) * TILT_AMP;
             const tiltZRad = -(smoothed.tiltX * Math.PI / 180) * TILT_AMP;
             buildingGroup.rotation.x = tiltXRad;
             buildingGroup.rotation.z = tiltZRad;
 
-            const shakeScale = Math.min(1, displayState.swayMag * 2.0) * SHAKE_MAX;
+            const shakeScale = Math.min(1, displayState.swayMag * 1.2) * SHAKE_MAX;
             buildingGroup.position.x = (Math.random() - 0.5) * shakeScale;
             buildingGroup.position.z = (Math.random() - 0.5) * shakeScale;
 
             material.color.setHex(integrityColor(smoothed.integrity));
 
-            const shear = Math.min(1, smoothed.damage / 50) * SHEAR_MAX;
+            const shear = Math.min(1, smoothed.damage / 80) * SHEAR_MAX;
             applyShear(shear);
 
             const tier = displayState.tier;
             if (tier === "critical" || tier === "evacuate") {
-                const pulse = 0.4 + 0.4 * Math.sin(now * 6.0);
+                const pulse = 0.15 + 0.2 * Math.sin(now * 4.0);
                 material.emissive.setHex(tier === "evacuate" ? 0xef4444 : 0xfb923c);
                 material.emissiveIntensity = pulse;
             } else {
@@ -622,34 +626,6 @@
         }
         render();
 
-        const SPRITE_MAP = {
-            wind:     { folder: "tilt_front", n: 10 },
-            seismic:  { folder: "tilt_left",  n: 10 },
-            overload: { folder: "tilt_back",  n: 10 },
-            thermal:  { folder: "tilt_right", n: 10 },
-            flood:    { folder: "tilt_front", n: 10 },
-        };
-        let spriteTimer = null;
-        function startSprite(kind) {
-            stopSprite();
-            const cfg = SPRITE_MAP[kind];
-            if (!cfg || !spriteEl) return;
-            let i = 1;
-            const tick = () => {
-                const idx = String(i).padStart(4, "0");
-                spriteEl.style.backgroundImage =
-                    `url('/assets/${cfg.folder}/${idx}.png')`;
-                spriteEl.classList.add("visible");
-                i = (i % cfg.n) + 1;
-            };
-            tick();
-            spriteTimer = setInterval(tick, 120);
-        }
-        function stopSprite() {
-            if (spriteTimer) { clearInterval(spriteTimer); spriteTimer = null; }
-            if (spriteEl) { spriteEl.classList.remove("visible"); spriteEl.style.backgroundImage = ""; }
-        }
-
         return {
             setScenarioMode(active, kind) {
                 const modeEl = document.getElementById("twin3d-mode");
@@ -657,8 +633,6 @@
                     modeEl.textContent = active ? ("SCENARIO: " + (kind || "").toUpperCase()) : "LIVE";
                     modeEl.classList.toggle("scenario", !!active);
                 }
-                if (active) startSprite(kind);
-                else stopSprite();
             },
         };
     })();
@@ -731,9 +705,9 @@
             displayState.damage = num(d.damage_percent, displayState.damage);
             displayState.tier = typeof d.alert_tier === "string" ? d.alert_tier : displayState.tier;
             const ratio = num(d.stress_ratio, 0);
-            displayState.swayMag = 0.05 + ratio * 0.6;
-            displayState.tiltX = Math.sin(d.progress * Math.PI * 4) * 3.0 * ratio;
-            displayState.tiltY = Math.cos(d.progress * Math.PI * 3) * 3.0 * ratio;
+            displayState.swayMag = 0.02 + ratio * 0.25;
+            displayState.tiltX = Math.sin(d.progress * Math.PI * 3) * 1.2 * ratio;
+            displayState.tiltY = Math.cos(d.progress * Math.PI * 2.5) * 1.0 * ratio;
 
             if (el.projStress) el.projStress.textContent = num(d.bending_stress, 0).toFixed(2);
             const stepEl = document.getElementById("val-scenario-step");

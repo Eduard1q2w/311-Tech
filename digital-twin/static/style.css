@@ -514,27 +514,6 @@ body {
     border-color: var(--danger);
 }
 
-#forecast-container {
-    width: 100%;
-    height: 120px;
-}
-
-#forecast-container svg {
-    width: 100%;
-    height: 100%;
-    display: block;
-}
-
-.forecast-axis {
-    display: flex;
-    justify-content: space-between;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--text-dim);
-    padding: 0 2px;
-    margin-top: 2px;
-}
-
 .scenario-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -556,6 +535,37 @@ body {
     letter-spacing: 1.2px;
     text-transform: uppercase;
     color: var(--text-dim);
+}
+
+.build-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.build-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.build-cell label {
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.build-cell input,
+.build-cell select {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    width: 100%;
 }
 
 .scenario-input-row {
@@ -661,22 +671,6 @@ body {
     display: block;
     width: 100% !important;
     height: 100% !important;
-}
-
-.twin3d-sprite {
-    position: absolute;
-    inset: 0;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    opacity: 0;
-    transition: opacity 300ms ease;
-    pointer-events: none;
-    mix-blend-mode: screen;
-}
-
-.twin3d-sprite.visible {
-    opacity: 0.22;
 }
 
 .twin3d-loading {

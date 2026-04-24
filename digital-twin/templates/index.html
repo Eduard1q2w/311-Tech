@@ -76,23 +76,42 @@
 
             <section class="card" id="card-building">
                 <h2>Building Model (Layer 0)</h2>
-                <div class="scenario-grid" style="grid-template-columns: 1fr 1fr; gap: 8px;">
-                    <div class="scenario-cell" style="margin-bottom:0">
-                        <label>Height (m)</label>
-                        <input type="number" id="in-b-height" value="10.0" min="0.01" step="0.1">
+                <div class="build-grid">
+                    <div class="build-cell">
+                        <label for="in-b-floors">Stories</label>
+                        <input type="number" id="in-b-floors" value="3" min="1" max="200" step="1">
                     </div>
-                    <div class="scenario-cell" style="margin-bottom:0">
-                        <label>Mass (kg)</label>
-                        <input type="number" id="in-b-mass" value="5000" min="1" step="10">
+                    <div class="build-cell">
+                        <label for="in-b-floor-height">Floor height (m)</label>
+                        <input type="number" id="in-b-floor-height" value="3.3" min="2" max="8" step="0.1">
                     </div>
-                    <div class="scenario-cell" style="margin-bottom:0">
-                        <label>Width (m)</label>
-                        <input type="number" id="in-b-width" value="0.3" min="0.01" step="0.01">
+                    <div class="build-cell">
+                        <label for="in-b-width">Plan width (m)</label>
+                        <input type="number" id="in-b-width" value="10" min="2" max="100" step="0.5">
                     </div>
-                    <div class="scenario-cell" style="margin-bottom:0">
-                        <label>Depth (m)</label>
-                        <input type="number" id="in-b-depth" value="0.3" min="0.01" step="0.01">
+                    <div class="build-cell">
+                        <label for="in-b-depth">Plan depth (m)</label>
+                        <input type="number" id="in-b-depth" value="10" min="2" max="100" step="0.5">
                     </div>
+                </div>
+                <div class="build-cell" style="margin-top:8px;">
+                    <label for="in-b-structure">Structural system</label>
+                    <select id="in-b-structure" class="select-input">
+                        <option value="concrete">Reinforced concrete frame</option>
+                        <option value="steel">Steel frame</option>
+                        <option value="masonry">Masonry load-bearing</option>
+                        <option value="timber">Timber frame</option>
+                    </select>
+                </div>
+                <div class="kv-row" style="margin-top:6px;">
+                    <span class="kv-label">Total height</span>
+                    <span class="kv-value" id="val-b-height">9.9</span>
+                    <span class="kv-unit">m</span>
+                </div>
+                <div class="kv-row">
+                    <span class="kv-label">Est. mass</span>
+                    <span class="kv-value" id="val-b-mass">0</span>
+                    <span class="kv-unit">t</span>
                 </div>
                 <button id="btn-sync-building" class="btn" type="button" style="margin-top:10px;">Sync to Twin</button>
             </section>
@@ -153,54 +172,7 @@
                 </div>
                 <div id="twin3d-mount">
                     <div id="twin3d-canvas-wrap"></div>
-                    <div id="twin3d-sprite" class="twin3d-sprite" aria-hidden="true"></div>
                     <div id="twin3d-loading" class="twin3d-loading">Loading building...</div>
-                </div>
-            </section>
-
-            <section class="card card-hero" id="card-prediction">
-                <div class="card-header">
-                    <h2>Predictive Health (Layer 6)</h2>
-                    <span class="resonance-badge" id="resonance-badge">Resonance OK</span>
-                </div>
-                <div class="hero-grid">
-                    <div class="gauge-wrap">
-                        <svg id="gauge-svg" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="70" cy="70" r="58" stroke="#2a3045" stroke-width="10" fill="none"></circle>
-                            <circle id="gauge-ring" cx="70" cy="70" r="58" stroke="#22c55e" stroke-width="10"
-                                fill="none" stroke-linecap="round"
-                                transform="rotate(-90 70 70)"
-                                stroke-dasharray="364.42" stroke-dashoffset="0"></circle>
-                        </svg>
-                        <div class="gauge-center">
-                            <div class="gauge-value" id="val-integrity">100</div>
-                            <div class="gauge-label">INTEGRITY</div>
-                        </div>
-                    </div>
-                    <div class="hero-side">
-                        <div class="kv-row"><span class="kv-label">Alert tier</span>
-                            <span class="kv-value tier-text" id="val-tier">nominal</span>
-                        </div>
-                        <div class="kv-row"><span class="kv-label">Resonance</span>
-                            <span class="kv-value" id="val-resonance">no</span>
-                        </div>
-                        <div class="kv-row"><span class="kv-label">Evacuate</span>
-                            <span class="kv-value" id="val-evac">no</span>
-                        </div>
-                        <div class="kv-row"><span class="kv-label">Time to failure</span>
-                            <span class="kv-value" id="val-ttf">&infin;</span>
-                            <span class="kv-unit">h</span>
-                            <div id="val-ttf-human" style="font-size: 11px; color: var(--text-muted); text-align: right; margin-top: 2px;"></div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section class="card" id="card-forecast">
-                <h2>Integrity forecast (24 h)</h2>
-                <div id="forecast-container"></div>
-                <div class="forecast-axis">
-                    <span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>24h</span>
                 </div>
             </section>
 
@@ -244,6 +216,44 @@
         </main>
 
         <aside id="right-panel" class="panel">
+
+            <section class="card card-hero" id="card-prediction">
+                <div class="card-header">
+                    <h2>Predictive Health (Layer 6)</h2>
+                    <span class="resonance-badge" id="resonance-badge">Resonance OK</span>
+                </div>
+                <div class="hero-grid">
+                    <div class="gauge-wrap">
+                        <svg id="gauge-svg" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="70" cy="70" r="58" stroke="#2a3045" stroke-width="10" fill="none"></circle>
+                            <circle id="gauge-ring" cx="70" cy="70" r="58" stroke="#22c55e" stroke-width="10"
+                                fill="none" stroke-linecap="round"
+                                transform="rotate(-90 70 70)"
+                                stroke-dasharray="364.42" stroke-dashoffset="0"></circle>
+                        </svg>
+                        <div class="gauge-center">
+                            <div class="gauge-value" id="val-integrity">100</div>
+                            <div class="gauge-label">INTEGRITY</div>
+                        </div>
+                    </div>
+                    <div class="hero-side">
+                        <div class="kv-row"><span class="kv-label">Alert tier</span>
+                            <span class="kv-value tier-text" id="val-tier">nominal</span>
+                        </div>
+                        <div class="kv-row"><span class="kv-label">Resonance</span>
+                            <span class="kv-value" id="val-resonance">no</span>
+                        </div>
+                        <div class="kv-row"><span class="kv-label">Evacuate</span>
+                            <span class="kv-value" id="val-evac">no</span>
+                        </div>
+                        <div class="kv-row"><span class="kv-label">Time to failure</span>
+                            <span class="kv-value" id="val-ttf">&infin;</span>
+                            <span class="kv-unit">h</span>
+                            <div id="val-ttf-human" style="font-size: 11px; color: var(--text-dim); text-align: right; margin-top: 2px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             <section class="card" id="card-stress">
                 <div class="card-header">
