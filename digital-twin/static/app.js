@@ -331,19 +331,13 @@
 
         if (el.swayVelX) el.swayVelX.textContent = num(d.sway_velocity_x, 0).toFixed(4);
         if (el.swayVelY) el.swayVelY.textContent = num(d.sway_velocity_y, 0).toFixed(4);
-        
-        const disp = num(d.lateral_displacement, 0);
-        if (el.disp) {
-            el.disp.textContent = disp.toFixed(1);
-            el.disp.className = "kv-value " + (disp > 10 ? "text-critical" : (disp > 5 ? "text-warning" : "text-safe"));
-        }
-        
+
         const torsion = num(d.torsion_angle, 0);
         if (el.torsion) {
             el.torsion.textContent = torsion.toFixed(2);
             el.torsion.className = "kv-value " + (Math.abs(torsion) > 5 ? "text-critical" : (Math.abs(torsion) > 2 ? "text-warning" : "text-safe"));
         }
-        
+
         if (el.domFreq) el.domFreq.textContent = num(d.dominant_frequency, 0).toFixed(3);
 
         if (typeof d.active_material === "string") {
@@ -357,12 +351,20 @@
         if (el.fatigue) el.fatigue.textContent = num(d.fatigue_limit, 0).toFixed(1);
         if (el.damping) el.damping.textContent = num(d.damping_ratio, 0).toFixed(3);
 
+        if (displayState.scenarioActive) return;
+
+        const disp = num(d.lateral_displacement, 0);
+        if (el.disp) {
+            el.disp.textContent = disp.toFixed(1);
+            el.disp.className = "kv-value " + (disp > 10 ? "text-critical" : (disp > 5 ? "text-warning" : "text-safe"));
+        }
+
         if (el.bend) el.bend.textContent = num(d.bending_stress, 0).toFixed(2);
         if (el.shear) el.shear.textContent = num(d.shear_stress, 0).toFixed(2);
         const ratio = num(d.stress_ratio, 0);
         if (el.bend) el.bend.className = "kv-value " + (ratio > 0.75 ? "text-critical" : (ratio > 0.5 ? "text-warning" : "text-safe"));
         if (el.shear) el.shear.className = "kv-value " + (ratio > 0.75 ? "text-critical" : (ratio > 0.5 ? "text-warning" : "text-safe"));
-        
+
         if (el.stressRatio) el.stressRatio.textContent = Math.round(ratio * 100) + "%";
         if (el.barStressRatio) {
             el.barStressRatio.style.width = Math.round(ratio * 100) + "%";
@@ -413,14 +415,12 @@
         }
         if (el.projStress) el.projStress.textContent = num(d.projected_stress, 0).toFixed(2);
 
-        if (!displayState.scenarioActive) {
-            displayState.tiltX = num(d.tilt_x, 0);
-            displayState.tiltY = num(d.tilt_y, 0);
-            displayState.swayMag = Math.hypot(num(d.sway_velocity_x, 0), num(d.sway_velocity_y, 0));
-            displayState.integrity = num(d.integrity_score, 100);
-            displayState.damage = num(d.damage_percent, 0);
-            displayState.tier = typeof d.alert_tier === "string" ? d.alert_tier : tierFromScore(displayState.integrity);
-        }
+        displayState.tiltX = num(d.tilt_x, 0);
+        displayState.tiltY = num(d.tilt_y, 0);
+        displayState.swayMag = Math.hypot(num(d.sway_velocity_x, 0), num(d.sway_velocity_y, 0));
+        displayState.integrity = num(d.integrity_score, 100);
+        displayState.damage = num(d.damage_percent, 0);
+        displayState.tier = typeof d.alert_tier === "string" ? d.alert_tier : tierFromScore(displayState.integrity);
     });
 
     const displayState = {
@@ -701,32 +701,63 @@
             return;
         }
         if (d.phase === "frame") {
-            displayState.integrity = num(d.integrity_score, displayState.integrity);
-            displayState.damage = num(d.damage_percent, displayState.damage);
-            displayState.tier = typeof d.alert_tier === "string" ? d.alert_tier : displayState.tier;
+            const bend = num(d.bending_stress, 0);
+            const shear = num(d.shear_stress, 0);
             const ratio = num(d.stress_ratio, 0);
+            const dispF = num(d.lateral_displacement, 0);
+            const dmg = num(d.damage_percent, 0);
+            const score = num(d.integrity_score, displayState.integrity);
+            const tier = typeof d.alert_tier === "string" ? d.alert_tier : tierFromScore(score);
+
+            displayState.integrity = score;
+            displayState.damage = dmg;
+            displayState.tier = tier;
             displayState.swayMag = 0.02 + ratio * 0.25;
             displayState.tiltX = Math.sin(d.progress * Math.PI * 3) * 1.2 * ratio;
             displayState.tiltY = Math.cos(d.progress * Math.PI * 2.5) * 1.0 * ratio;
 
-            if (el.projStress) el.projStress.textContent = num(d.bending_stress, 0).toFixed(2);
+            const stressClass = "kv-value " + (ratio > 0.75 ? "text-critical" : (ratio > 0.5 ? "text-warning" : "text-safe"));
+            if (el.bend) { el.bend.textContent = bend.toFixed(2); el.bend.className = stressClass; }
+            if (el.shear) { el.shear.textContent = shear.toFixed(2); el.shear.className = stressClass; }
+            if (el.stressRatio) el.stressRatio.textContent = Math.round(ratio * 100) + "%";
+            if (el.barStressRatio) {
+                el.barStressRatio.style.width = Math.round(ratio * 100) + "%";
+                let color = "var(--ok)";
+                if (ratio > 0.75) color = "var(--danger)";
+                else if (ratio > 0.5) color = "var(--warning)";
+                else if (ratio > 0.3) color = "var(--accent)";
+                el.barStressRatio.style.background = color;
+            }
+            if (el.damage) el.damage.textContent = dmg.toFixed(3);
+            if (el.disp) {
+                el.disp.textContent = dispF.toFixed(1);
+                el.disp.className = "kv-value " + (dispF > 10 ? "text-critical" : (dispF > 5 ? "text-warning" : "text-safe"));
+            }
+
+            if (el.projStress) el.projStress.textContent = bend.toFixed(2);
             const stepEl = document.getElementById("val-scenario-step");
             if (stepEl) stepEl.textContent = d.step + "/" + d.n_steps;
 
-            if (el.integrity) el.integrity.textContent = Math.round(displayState.integrity);
+            if (el.integrity) el.integrity.textContent = Math.round(score);
             if (el.tier) {
-                el.tier.textContent = displayState.tier;
-                el.tier.style.color = tierColor(displayState.tier);
+                el.tier.textContent = tier;
+                el.tier.style.color = tierColor(tier);
             }
-            applyTierBadge(el.headerTier, displayState.tier);
-            updateGauge(displayState.integrity, displayState.tier);
+            applyTierBadge(el.headerTier, tier);
+            updateGauge(score, tier);
 
-            if (scenarioChart) scenarioChart.push(
-                d.t_s,
-                num(d.bending_stress, 0),
-                num(d.lateral_displacement, 0),
-                num(d.integrity_score, 0)
-            );
+            if (el.evac) el.evac.textContent = (tier === "evacuate") ? "YES" : "no";
+            if (el.ttf) {
+                el.ttf.textContent = "—";
+                if (el.ttfHuman) el.ttfHuman.textContent = "Simulated scenario";
+            }
+            if (el.resonance) el.resonance.textContent = "sim";
+            if (el.resonanceBadge) {
+                el.resonanceBadge.textContent = "Scenario run";
+                el.resonanceBadge.classList.remove("active");
+            }
+
+            if (scenarioChart) scenarioChart.push(d.t_s, bend, dispF, score);
             return;
         }
         if (d.phase === "end" || d.phase === "error") {

@@ -12,6 +12,9 @@ PREDICT_INTERVAL = 1.0
 _stop_event = threading.Event()
 _thread = None
 
+_floor_lock = threading.Lock()
+_integrity_floor = 100.0
+
 
 def _compute_integrity(snap):
     score = 100.0
@@ -100,17 +103,23 @@ def _compute_forecast(snap, damage_rate_per_hour, integrity):
 
 
 def _predict_cycle():
+    global _integrity_floor
     snap = state.snapshot()
 
-    integrity = _compute_integrity(snap)
-    tier = _compute_alert_tier(integrity)
+    live_integrity = _compute_integrity(snap)
+    with _floor_lock:
+        if live_integrity < _integrity_floor:
+            _integrity_floor = live_integrity
+        published = _integrity_floor
+
+    tier = _compute_alert_tier(published)
     resonance = _compute_resonance_warning(snap)
     damage_rate = _compute_damage_rate_per_hour(snap)
-    ttf = _compute_ttf(snap, damage_rate, integrity)
-    forecast = _compute_forecast(snap, damage_rate, integrity)
+    ttf = _compute_ttf(snap, damage_rate, published)
+    forecast = _compute_forecast(snap, damage_rate, published)
 
     state.update(
-        integrity_score=integrity,
+        integrity_score=published,
         alert_tier=tier,
         evacuation_flag=(tier == "evacuate"),
         resonance_warning=resonance,
@@ -147,6 +156,9 @@ def stop():
 
 
 def reset_baseline():
+    global _integrity_floor
+    with _floor_lock:
+        _integrity_floor = 100.0
     state.update(
         integrity_score=100.0,
         alert_tier="nominal",
@@ -228,6 +240,7 @@ if __name__ == "__main__":
     _check("no evacuation", not state.evacuation_flag)
 
     print("\n[2] Stress ratio > 0.3 reduces score")
+    reset_baseline()
     state.update(stress_ratio=0.8, damage_percent=0.0, torsion_angle=0.0, dominant_frequency=0.0)
     _predict_cycle()
     expected = 100.0 - (0.8 - 0.3) * 60.0
@@ -238,6 +251,7 @@ if __name__ == "__main__":
     )
 
     print("\n[3] Damage deducted directly")
+    reset_baseline()
     state.update(stress_ratio=0.0, damage_percent=25.0, torsion_angle=0.0, dominant_frequency=0.0)
     _predict_cycle()
     _check(
@@ -247,6 +261,7 @@ if __name__ == "__main__":
     )
 
     print("\n[4] Torsion deduction")
+    reset_baseline()
     state.update(stress_ratio=0.0, damage_percent=0.0, torsion_angle=5.0, dominant_frequency=0.0)
     _predict_cycle()
     expected = 100.0 - 5.0 * 2.0
@@ -257,6 +272,7 @@ if __name__ == "__main__":
     )
 
     print("\n[5] Resonance warning")
+    reset_baseline()
     state.update(stress_ratio=0.0, damage_percent=0.0, torsion_angle=0.0, dominant_frequency=1.0)
     _predict_cycle()
     _check(
@@ -276,6 +292,30 @@ if __name__ == "__main__":
         state.resonance_warning is False,
     )
 
+    print("\n[5b] Integrity is monotonic — does not rebound")
+    reset_baseline()
+    state.update(stress_ratio=0.8, damage_percent=0.0, torsion_angle=0.0, dominant_frequency=0.0)
+    _predict_cycle()
+    low_watermark = state.integrity_score
+    _check(
+        "score dropped under stress",
+        low_watermark < 100.0,
+        f"(got {low_watermark})",
+    )
+    state.update(stress_ratio=0.0, damage_percent=0.0, torsion_angle=0.0, dominant_frequency=0.0)
+    _predict_cycle()
+    _check(
+        "score stays at low-watermark after stress removed",
+        abs(state.integrity_score - low_watermark) < 0.2,
+        f"(got {state.integrity_score}, expected {low_watermark})",
+    )
+    reset_baseline()
+    _check(
+        "reset_baseline restores 100",
+        state.integrity_score == 100.0,
+        f"(got {state.integrity_score})",
+    )
+
     print("\n[6] Alert tier thresholds")
     for score_val, expected_tier in [
         (95.0, "nominal"), (70.0, "watch"), (50.0, "warning"),
@@ -289,6 +329,7 @@ if __name__ == "__main__":
         )
 
     print("\n[7] Evacuation flag")
+    reset_baseline()
     state.update(stress_ratio=1.0, damage_percent=90.0, torsion_angle=10.0, dominant_frequency=1.0)
     _predict_cycle()
     _check(
@@ -298,6 +339,7 @@ if __name__ == "__main__":
     )
 
     print("\n[8] Forecast is 25 elements, monotonically decreasing or flat")
+    reset_baseline()
     state.update(
         stress_ratio=0.5, damage_percent=5.0,
         torsion_angle=0.0, dominant_frequency=0.0,
