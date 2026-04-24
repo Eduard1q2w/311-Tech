@@ -18,6 +18,7 @@ ACCEL_CUTOFF_HZ = 9.5
 DISPLACEMENT_CUTOFF_HZ = 1.0
 FILTER_ORDER = 2
 TILT_DEADBAND_DEG = 0.10
+ACCEL_DEADBAND_G = 0.005
 
 _offset = {"x": 0.0, "y": 0.0, "z": 0.0}
 _state_lock = threading.Lock()
@@ -156,6 +157,13 @@ def _process_sample(reading):
         fx = _filter_x.step(cal_x)
         fy = _filter_y.step(cal_y)
         fz = _filter_z.step(cal_z)
+
+    if abs(fx) < ACCEL_DEADBAND_G:
+        fx = 0.0
+    if abs(fy) < ACCEL_DEADBAND_G:
+        fy = 0.0
+    if abs(fz) < ACCEL_DEADBAND_G:
+        fz = 0.0
 
     denom_x = math.sqrt(fx * fx + fz * fz)
     denom_y = math.sqrt(fy * fy + fz * fz)

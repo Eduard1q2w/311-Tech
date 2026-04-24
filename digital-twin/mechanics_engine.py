@@ -203,6 +203,22 @@ def _compute_cycle():
         if dt_s <= 0.0:
             return
 
+        if ax == 0.0 and ay == 0.0:
+            _reset_integrators()
+            dom_rest = _compute_dominant_frequency()
+            state.update(
+                sway_velocity_x=0.0,
+                sway_velocity_y=0.0,
+                lateral_displacement=0.0,
+                torsion_angle=0.0,
+                dominant_frequency=round(dom_rest, 3),
+                freq_shift_pct=0.0,
+            )
+            _prev_ax = ax
+            _prev_ay = ay
+            _prev_timestamp_ms = ts_ms
+            return
+
         a_prev_x_ms2 = _prev_ax * GRAVITY
         a_curr_x_ms2 = ax * GRAVITY
         a_prev_y_ms2 = _prev_ay * GRAVITY
