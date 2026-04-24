@@ -314,6 +314,311 @@ body {
     background: #3a4159;
 }
 
+.panel {
+    overflow-y: auto;
+}
+
+#header-spacer {
+    flex: 1 1 auto;
+}
+
+#header-material-label {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.header-chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    letter-spacing: 0.5px;
+}
+
+.tier-badge {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--ok);
+    border: 1px solid var(--ok);
+}
+
+.tier-nominal  { color: var(--ok);      border-color: var(--ok);      background: rgba(34, 197, 94, 0.15); }
+.tier-watch    { color: var(--accent);  border-color: var(--accent);  background: rgba(0, 212, 255, 0.15); }
+.tier-warning  { color: var(--warning); border-color: var(--warning); background: rgba(245, 158, 11, 0.18); }
+.tier-critical { color: #fb923c;        border-color: #fb923c;        background: rgba(251, 146, 60, 0.18); }
+.tier-evacuate { color: var(--danger);  border-color: var(--danger);  background: rgba(239, 68, 68, 0.22); }
+
+.tier-text {
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-size: 16px;
+}
+
+.kv-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: baseline;
+    gap: 10px;
+    padding: 4px 0;
+    border-top: 1px solid rgba(42, 48, 69, 0.4);
+}
+
+.kv-row:first-of-type {
+    border-top: none;
+}
+
+.kv-label {
+    font-size: 11px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.kv-value {
+    font-family: var(--mono);
+    font-size: 16px;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.kv-unit {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+}
+
+.kv-sub {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-dim);
+    margin-top: 4px;
+}
+
+.select-input,
+.scenario-input-row input {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+}
+
+.select-input {
+    width: 100%;
+}
+
+.scenario-input-row input {
+    width: 60px;
+}
+
+.bar-outer {
+    width: 100%;
+    height: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.bar-inner {
+    height: 100%;
+    background: var(--ok);
+    transition: width 300ms ease, background 300ms ease;
+}
+
+.card-hero {
+    background: linear-gradient(180deg, #1c2130, #161a27);
+}
+
+.hero-grid {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 16px;
+    align-items: center;
+}
+
+.gauge-wrap {
+    position: relative;
+    width: 140px;
+    height: 140px;
+}
+
+#gauge-svg {
+    width: 140px;
+    height: 140px;
+    transition: filter 300ms ease;
+}
+
+.gauge-center {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.gauge-value {
+    font-family: var(--mono);
+    font-size: 36px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.gauge-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-top: 4px;
+}
+
+.hero-side {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.resonance-badge {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--ok);
+    border: 1px solid var(--ok);
+    text-transform: uppercase;
+}
+
+.resonance-badge.active {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger);
+    border-color: var(--danger);
+}
+
+#forecast-container {
+    width: 100%;
+    height: 120px;
+}
+
+#forecast-container svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.forecast-axis {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    padding: 0 2px;
+    margin-top: 2px;
+}
+
+.scenario-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.scenario-cell {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.scenario-cell label {
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+.scenario-input-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.scenario-unit {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+}
+
+.scenario-readout {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+}
+
+.btn,
+.btn-ghost,
+.btn-tiny {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 150ms, color 150ms, border-color 150ms;
+}
+
+.btn {
+    font-size: 11px;
+    padding: 6px 10px;
+}
+
+.btn-ghost {
+    font-size: 10px;
+    padding: 3px 8px;
+}
+
+.btn-tiny {
+    font-size: 10px;
+    padding: 4px 8px;
+    margin-left: auto;
+}
+
+.btn:hover,
+.btn-ghost:hover,
+.btn-tiny:hover {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+}
+
+.btn:active,
+.btn-ghost:active,
+.btn-tiny:active { transform: translateY(1px); }
+
 @media (max-width: 768px) {
     html,
     body {
