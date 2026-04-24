@@ -61,6 +61,13 @@
         btnClearScenario: document.getElementById("btn-clear-scenario"),
 
         btnCalibrate: document.getElementById("btn-calibrate"),
+
+        btnSyncBuilding: document.getElementById("btn-sync-building"),
+        inBHeight: document.getElementById("in-b-height"),
+        inBMass: document.getElementById("in-b-mass"),
+        inBWidth: document.getElementById("in-b-width"),
+        inBDepth: document.getElementById("in-b-depth"),
+        ttfHuman: document.getElementById("val-ttf-human"),
     };
 
     const local = {
@@ -262,6 +269,23 @@
         });
     });
 
+    if (el.btnSyncBuilding) {
+        el.btnSyncBuilding.addEventListener("click", () => {
+            const body = {
+                height: parseFloat(el.inBHeight.value),
+                mass: parseFloat(el.inBMass.value),
+                width: parseFloat(el.inBWidth.value),
+                depth: parseFloat(el.inBDepth.value)
+            };
+            apiPost("/api/dimensions", body).then(res => {
+                if (res.status === "ok") {
+                    el.btnSyncBuilding.textContent = "Synced!";
+                    setTimeout(() => el.btnSyncBuilding.textContent = "Sync to Twin", 2000);
+                }
+            }).catch(console.error);
+        });
+    }
+
     setStatus("status-disconnected", "Disconnected");
 
     const socket = io({
@@ -299,8 +323,19 @@
 
         if (el.swayVelX) el.swayVelX.textContent = num(d.sway_velocity_x, 0).toFixed(4);
         if (el.swayVelY) el.swayVelY.textContent = num(d.sway_velocity_y, 0).toFixed(4);
-        if (el.disp) el.disp.textContent = num(d.lateral_displacement, 0).toFixed(1);
-        if (el.torsion) el.torsion.textContent = num(d.torsion_angle, 0).toFixed(2);
+        
+        const disp = num(d.lateral_displacement, 0);
+        if (el.disp) {
+            el.disp.textContent = disp.toFixed(1);
+            el.disp.className = "kv-value " + (disp > 10 ? "text-critical" : (disp > 5 ? "text-warning" : "text-safe"));
+        }
+        
+        const torsion = num(d.torsion_angle, 0);
+        if (el.torsion) {
+            el.torsion.textContent = torsion.toFixed(2);
+            el.torsion.className = "kv-value " + (Math.abs(torsion) > 5 ? "text-critical" : (Math.abs(torsion) > 2 ? "text-warning" : "text-safe"));
+        }
+        
         if (el.domFreq) el.domFreq.textContent = num(d.dominant_frequency, 0).toFixed(3);
 
         if (typeof d.active_material === "string") {
@@ -317,6 +352,9 @@
         if (el.bend) el.bend.textContent = num(d.bending_stress, 0).toFixed(2);
         if (el.shear) el.shear.textContent = num(d.shear_stress, 0).toFixed(2);
         const ratio = num(d.stress_ratio, 0);
+        if (el.bend) el.bend.className = "kv-value " + (ratio > 0.75 ? "text-critical" : (ratio > 0.5 ? "text-warning" : "text-safe"));
+        if (el.shear) el.shear.className = "kv-value " + (ratio > 0.75 ? "text-critical" : (ratio > 0.5 ? "text-warning" : "text-safe"));
+        
         if (el.stressRatio) el.stressRatio.textContent = Math.round(ratio * 100) + "%";
         if (el.barStressRatio) {
             el.barStressRatio.style.width = Math.round(ratio * 100) + "%";
@@ -348,9 +386,18 @@
         if (el.evac) el.evac.textContent = d.evacuation_flag ? "YES" : "no";
         if (el.ttf) {
             const t = d.time_to_failure_hours;
-            if (t === null || t === undefined || !isFinite(t)) el.ttf.innerHTML = "&infin;";
-            else if (t >= 9999) el.ttf.innerHTML = "&infin;";
-            else el.ttf.textContent = t.toFixed(1);
+            if (t === null || t === undefined || !isFinite(t) || t >= 9999) {
+                el.ttf.innerHTML = "&infin;";
+                if (el.ttfHuman) el.ttfHuman.textContent = "Safe baseline";
+            } else {
+                el.ttf.textContent = t.toFixed(1);
+                if (el.ttfHuman) {
+                    const days = Math.floor(t / 24);
+                    const hours = Math.round(t % 24);
+                    if (days > 0) el.ttfHuman.textContent = `~${days} days, ${hours} hrs`;
+                    else el.ttfHuman.textContent = `~${hours} hrs remaining`;
+                }
+            }
         }
 
         if (Array.isArray(d.forecast_24h)) updateForecast(d.forecast_24h);

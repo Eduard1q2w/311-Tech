@@ -136,6 +136,20 @@ def api_reset_damage():
     return jsonify({"status": "ok", "damage_percent": 0.0, "integrity_score": 100.0})
 
 
+@app.route("/api/dimensions", methods=["POST"])
+def api_set_dimensions():
+    body = request.get_json(force=True)
+    h = float(body.get("height", 10.0))
+    w = float(body.get("width", 0.3))
+    d = float(body.get("depth", 0.3))
+    m = float(body.get("mass", 5000.0))
+    stress_model.set_dimensions(h, w, d, m)
+    return jsonify({
+        "status": "ok", 
+        "dimensions": {"height_m": h, "width_m": w, "depth_m": d, "mass_kg": m}
+    })
+
+
 @socketio.on("connect")
 def _on_connect():
     socketio.emit("sensor_data", state.to_dict())

@@ -24,6 +24,26 @@ _damage_lock = threading.Lock()
 _cumulative_damage = 0.0
 _total_cycles = 0
 
+def set_dimensions(height_m: float, width_m: float, depth_m: float, mass_kg: float):
+    global BUILDING_HEIGHT, CROSS_SECTION_WIDTH, CROSS_SECTION_DEPTH, MASS_ESTIMATE
+    global I, C, AREA
+    with _damage_lock:
+        BUILDING_HEIGHT = max(0.01, height_m)
+        CROSS_SECTION_WIDTH = max(0.01, width_m)
+        CROSS_SECTION_DEPTH = max(0.01, depth_m)
+        MASS_ESTIMATE = max(0.01, mass_kg)
+        
+        I = (CROSS_SECTION_WIDTH * CROSS_SECTION_DEPTH ** 3) / 12.0
+        C = CROSS_SECTION_DEPTH / 2.0
+        AREA = CROSS_SECTION_WIDTH * CROSS_SECTION_DEPTH
+        
+        state.update(
+            building_height_m=BUILDING_HEIGHT,
+            cross_section_width_m=CROSS_SECTION_WIDTH,
+            cross_section_depth_m=CROSS_SECTION_DEPTH,
+            mass_estimate_kg=MASS_ESTIMATE
+        )
+
 
 def _compute_cycle():
     global _cumulative_damage, _total_cycles

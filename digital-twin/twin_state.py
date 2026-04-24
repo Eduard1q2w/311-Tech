@@ -43,6 +43,11 @@ class TwinState:
     evacuation_flag: bool = False
     resonance_warning: bool = False
 
+    building_height_m: float = 10.0
+    cross_section_width_m: float = 0.3
+    cross_section_depth_m: float = 0.3
+    mass_estimate_kg: float = 5000.0
+
     def __post_init__(self):
         self._lock = RLock()
         self._field_names = {f.name for f in fields(self)}

@@ -69,6 +69,29 @@
                 </div>
             </section>
 
+            <section class="card" id="card-building">
+                <h2>Building Model (Layer 0)</h2>
+                <div class="scenario-grid" style="grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div class="scenario-cell" style="margin-bottom:0">
+                        <label>Height (m)</label>
+                        <input type="number" id="in-b-height" value="10.0" min="0.01" step="0.1">
+                    </div>
+                    <div class="scenario-cell" style="margin-bottom:0">
+                        <label>Mass (kg)</label>
+                        <input type="number" id="in-b-mass" value="5000" min="1" step="10">
+                    </div>
+                    <div class="scenario-cell" style="margin-bottom:0">
+                        <label>Width (m)</label>
+                        <input type="number" id="in-b-width" value="0.3" min="0.01" step="0.01">
+                    </div>
+                    <div class="scenario-cell" style="margin-bottom:0">
+                        <label>Depth (m)</label>
+                        <input type="number" id="in-b-depth" value="0.3" min="0.01" step="0.01">
+                    </div>
+                </div>
+                <button id="btn-sync-building" class="btn" type="button" style="margin-top:10px;">Sync to Twin</button>
+            </section>
+
             <section class="card" id="card-material">
                 <h2>Material (Layer 3)</h2>
                 <select id="sel-material" class="select-input">
@@ -150,6 +173,7 @@
                         <div class="kv-row"><span class="kv-label">Time to failure</span>
                             <span class="kv-value" id="val-ttf">&infin;</span>
                             <span class="kv-unit">h</span>
+                            <div id="val-ttf-human" style="font-size: 11px; color: var(--text-muted); text-align: right; margin-top: 2px;"></div>
                         </div>
                     </div>
                 </div>

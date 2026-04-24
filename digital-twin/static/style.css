@@ -659,3 +659,7 @@ body {
         padding: 14px;
     }
 }
+
+.text-safe { color: var(--ok) !important; text-shadow: 0 0 8px rgba(34, 197, 94, 0.4); }
+.text-warning { color: var(--warning) !important; text-shadow: 0 0 8px rgba(245, 158, 11, 0.4); }
+.text-critical { color: var(--danger) !important; text-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }
