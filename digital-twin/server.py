@@ -27,7 +27,7 @@ except ImportError as e:
 
 def _start_all_layers():
     print("=" * 60)
-    print(" Predictive Digital Twin — booting engineering layers")
+    print(" Durian — booting engineering stack")
     print("=" * 60)
     print("  [1/8] twin_state ........... loaded")
     print("  [2/8] sensor_reader ........ loaded (thread auto-started)")
@@ -54,7 +54,7 @@ from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_socketio import SocketIO
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "digital-twin-dev"
+app.config["SECRET_KEY"] = "durian-dev"
 socketio = SocketIO(app, async_mode="eventlet", cors_allowed_origins="*")
 
 BROADCAST_INTERVAL = 0.05
@@ -132,6 +132,8 @@ def api_calibrate():
     result = sensor_processor.recalibrate()
     stress_model.reset_damage()
     predictor.reset_baseline()
+    if _has_mechanics:
+        mechanics_engine.reset()
     return jsonify({"status": "ok", "calibration": result})
 
 
@@ -171,10 +173,27 @@ def api_set_dimensions():
     w = float(body.get("width", 0.3))
     d = float(body.get("depth", 0.3))
     m = float(body.get("mass", 5000.0))
-    stress_model.set_dimensions(h, w, d, m)
+    stories = body.get("stories", None)
+    floor_height = body.get("floor_height", None)
+    plan_width = body.get("plan_width", w)
+    plan_depth = body.get("plan_depth", d)
+    structural_system = body.get("structural_system", None)
+    stress_model.set_dimensions(
+        h, w, d, m,
+        stories=int(stories) if stories is not None else None,
+        floor_height=float(floor_height) if floor_height is not None else None,
+        plan_width=float(plan_width) if plan_width is not None else None,
+        plan_depth=float(plan_depth) if plan_depth is not None else None,
+        structural_system=structural_system,
+    )
     return jsonify({
-        "status": "ok", 
-        "dimensions": {"height_m": h, "width_m": w, "depth_m": d, "mass_kg": m}
+        "status": "ok",
+        "dimensions": {
+            "height_m": h, "width_m": w, "depth_m": d, "mass_kg": m,
+            "stories": stories, "floor_height": floor_height,
+            "plan_width": plan_width, "plan_depth": plan_depth,
+            "structural_system": structural_system,
+        }
     })
 
 

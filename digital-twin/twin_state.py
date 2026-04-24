@@ -11,6 +11,7 @@ class TwinState:
     az: float = 0.0
     tilt_x: float = 0.0
     tilt_y: float = 0.0
+    tilt_magnitude: float = 0.0
     timestamp: float = 0.0
 
     sway_velocity_x: float = 0.0
@@ -18,6 +19,8 @@ class TwinState:
     lateral_displacement: float = 0.0
     torsion_angle: float = 0.0
     dominant_frequency: float = 0.0
+    baseline_frequency_hz: float = 0.0
+    freq_shift_pct: float = 0.0
 
     active_material: str = "reinforced_concrete"
     yield_strength: float = 0.0
@@ -43,10 +46,30 @@ class TwinState:
     evacuation_flag: bool = False
     resonance_warning: bool = False
 
-    building_height_m: float = 10.0
-    cross_section_width_m: float = 0.3
-    cross_section_depth_m: float = 0.3
-    mass_estimate_kg: float = 5000.0
+    penalty_stress: float = 0.0
+    penalty_fatigue: float = 0.0
+    penalty_freq: float = 0.0
+    penalty_tilt: float = 0.0
+    penalty_disp: float = 0.0
+    w_stress: float = 0.35
+    w_fatigue: float = 0.20
+    w_freq: float = 0.20
+    w_tilt: float = 0.15
+    w_disp: float = 0.10
+
+    stories: int = 3
+    floor_height: float = 3.3
+    plan_width: float = 10.0
+    plan_depth: float = 10.0
+    structural_system: str = "concrete"
+    building_height_m: float = 9.9
+    cross_section_width_m: float = 10.0
+    cross_section_depth_m: float = 10.0
+    mass_estimate_kg: float = 1_039_500.0
+    tilt_limit_alert_deg: float = 0.0
+    tilt_limit_severe_deg: float = 0.0
+    tilt_limit_critical_deg: float = 0.0
+    disp_limit_mm: float = 0.0
 
     def __post_init__(self):
         self._lock = RLock()

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Predictive Digital Twin</title>
+    <title>Durian</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -14,8 +14,8 @@
 </head>
 <body>
     <header id="app-header">
-        <h1>Predictive Digital Twin</h1>
-        <span id="app-subtitle">MPU6050 &bull; Live telemetry &bull; 6-layer predictive stack</span>
+        <h1>Durian</h1>
+        <span id="app-subtitle">MPU6050 &bull; Live telemetry &bull; Predictive structural health</span>
         <span id="header-spacer"></span>
         <span id="header-material-label">Material:</span>
         <span id="header-material" class="header-chip">reinforced_concrete</span>
@@ -46,36 +46,50 @@
             </section>
 
             <section class="card" id="card-mechanics">
-                <h2>Mechanics (Layer 2)</h2>
+                <h2>Mechanics</h2>
                 <div class="kv-row">
-                    <span class="kv-label">Sway vel X</span>
+                    <span class="kv-label">Sway vel X <button type="button" class="info-btn" data-info="sway_velocity">i</button></span>
                     <span class="kv-value" id="val-sway-x">0.0000</span>
                     <span class="kv-unit">m/s</span>
                 </div>
                 <div class="kv-row">
-                    <span class="kv-label">Sway vel Y</span>
+                    <span class="kv-label">Sway vel Y <button type="button" class="info-btn" data-info="sway_velocity">i</button></span>
                     <span class="kv-value" id="val-sway-y">0.0000</span>
                     <span class="kv-unit">m/s</span>
                 </div>
                 <div class="kv-row">
-                    <span class="kv-label">Lateral disp</span>
+                    <span class="kv-label">Lateral disp <button type="button" class="info-btn" data-info="lateral_displacement">i</button></span>
                     <span class="kv-value" id="val-disp">0.0</span>
                     <span class="kv-unit">mm</span>
                 </div>
                 <div class="kv-row">
-                    <span class="kv-label">Torsion</span>
+                    <span class="kv-label">Torsion <button type="button" class="info-btn" data-info="torsion">i</button></span>
                     <span class="kv-value" id="val-torsion">0.00</span>
                     <span class="kv-unit">&deg;</span>
                 </div>
                 <div class="kv-row">
-                    <span class="kv-label">Dominant f</span>
+                    <span class="kv-label">Dominant f <button type="button" class="info-btn" data-info="dominant_frequency">i</button></span>
                     <span class="kv-value" id="val-dom-freq">0.000</span>
                     <span class="kv-unit">Hz</span>
+                </div>
+                <div id="freq-health" class="freq-health">
+                    <div class="freq-health-row">
+                        <span class="kv-label">Baseline f</span>
+                        <span class="kv-value" id="val-baseline-freq">0.000</span>
+                        <span class="kv-unit">Hz</span>
+                    </div>
+                    <div class="freq-health-row">
+                        <span class="kv-label">Shift</span>
+                        <span class="kv-value" id="val-freq-shift">0.00</span>
+                        <span class="kv-unit">%</span>
+                        <span id="freq-health-dot" class="health-dot health-dot-green"></span>
+                    </div>
+                    <div class="freq-health-note">Scăderea frecvenței naturale indică pierdere de rigiditate structurală.</div>
                 </div>
             </section>
 
             <section class="card" id="card-building">
-                <h2>Building Model (Layer 0)</h2>
+                <h2>Building Model</h2>
                 <div class="build-grid">
                     <div class="build-cell">
                         <label for="in-b-floors">Stories</label>
@@ -117,7 +131,7 @@
             </section>
 
             <section class="card" id="card-material">
-                <h2>Material (Layer 3)</h2>
+                <h2>Material</h2>
                 <select id="sel-material" class="select-input">
                     <option value="reinforced_concrete">Reinforced Concrete</option>
                     <option value="structural_steel">Structural Steel</option>
@@ -178,7 +192,7 @@
 
             <section class="card" id="card-scenario">
                 <div class="card-header">
-                    <h2>Scenario Runner (Layer 5)</h2>
+                    <h2>Scenario Runner</h2>
                     <button id="btn-stop-scenario" class="btn-ghost danger" type="button">Stop</button>
                 </div>
                 <div class="scenario-controls">
@@ -219,7 +233,7 @@
 
             <section class="card card-hero" id="card-prediction">
                 <div class="card-header">
-                    <h2>Predictive Health (Layer 6)</h2>
+                    <h2>Predictive Health</h2>
                     <span class="resonance-badge" id="resonance-badge">Resonance OK</span>
                 </div>
                 <div class="hero-grid">
@@ -233,7 +247,7 @@
                         </svg>
                         <div class="gauge-center">
                             <div class="gauge-value" id="val-integrity">100</div>
-                            <div class="gauge-label">INTEGRITY</div>
+                            <div class="gauge-label">INTEGRITY <button type="button" class="info-btn" data-info="integrity_score">i</button></div>
                         </div>
                     </div>
                     <div class="hero-side">
@@ -246,31 +260,60 @@
                         <div class="kv-row"><span class="kv-label">Evacuate</span>
                             <span class="kv-value" id="val-evac">no</span>
                         </div>
-                        <div class="kv-row"><span class="kv-label">Time to failure</span>
+                        <div class="kv-row"><span class="kv-label">Time to failure <button type="button" class="info-btn" data-info="time_to_failure">i</button></span>
                             <span class="kv-value" id="val-ttf">&infin;</span>
                             <span class="kv-unit">h</span>
                             <div id="val-ttf-human" style="font-size: 11px; color: var(--text-dim); text-align: right; margin-top: 2px;"></div>
                         </div>
                     </div>
                 </div>
+                <div id="weights-panel" class="weights-panel">
+                    <div class="weights-title">Integrity contribution breakdown</div>
+                    <div class="weight-row">
+                        <span class="weight-label">Stress</span>
+                        <div class="weight-bar-outer"><div id="wbar-stress" class="weight-bar-inner"></div></div>
+                        <span id="wval-stress" class="weight-val">0.0 / 100</span>
+                    </div>
+                    <div class="weight-row">
+                        <span class="weight-label">Fatigue</span>
+                        <div class="weight-bar-outer"><div id="wbar-fatigue" class="weight-bar-inner"></div></div>
+                        <span id="wval-fatigue" class="weight-val">0.0 / 100</span>
+                    </div>
+                    <div class="weight-row">
+                        <span class="weight-label">Frequency</span>
+                        <div class="weight-bar-outer"><div id="wbar-freq" class="weight-bar-inner"></div></div>
+                        <span id="wval-freq" class="weight-val">0.0 / 100</span>
+                    </div>
+                    <div class="weight-row">
+                        <span class="weight-label">Tilt</span>
+                        <div class="weight-bar-outer"><div id="wbar-tilt" class="weight-bar-inner"></div></div>
+                        <span id="wval-tilt" class="weight-val">0.0 / 100</span>
+                    </div>
+                    <div class="weight-row">
+                        <span class="weight-label">Displacement</span>
+                        <div class="weight-bar-outer"><div id="wbar-disp" class="weight-bar-inner"></div></div>
+                        <span id="wval-disp" class="weight-val">0.0 / 100</span>
+                    </div>
+                    <div id="weights-note" class="weights-note">Weights adjusted for — / —</div>
+                </div>
             </section>
 
             <section class="card" id="card-stress">
                 <div class="card-header">
-                    <h2>Stress (Layer 4)</h2>
+                    <h2>Stress</h2>
                     <button id="btn-reset-damage" class="btn-ghost" type="button">Reset dmg</button>
                 </div>
                 <div class="kv-row">
-                    <span class="kv-label">Bending</span>
+                    <span class="kv-label">Bending <button type="button" class="info-btn" data-info="bending_stress">i</button></span>
                     <span class="kv-value" id="val-bend">0.00</span>
                     <span class="kv-unit">MPa</span>
                 </div>
                 <div class="kv-row">
-                    <span class="kv-label">Shear</span>
+                    <span class="kv-label">Shear <button type="button" class="info-btn" data-info="shear_stress">i</button></span>
                     <span class="kv-value" id="val-shear">0.00</span>
                     <span class="kv-unit">MPa</span>
                 </div>
-                <div class="kv-sub">Stress ratio (of yield)</div>
+                <div class="kv-sub">Stress ratio (of material limit) <button type="button" class="info-btn" data-info="stress_ratio">i</button></div>
                 <div class="bar-outer">
                     <div id="bar-stress-ratio" class="bar-inner" style="width:0%"></div>
                 </div>
@@ -279,7 +322,7 @@
                     <span class="kv-value" id="val-stress-ratio">0%</span>
                 </div>
                 <div class="kv-row">
-                    <span class="kv-label">Damage</span>
+                    <span class="kv-label">Damage <button type="button" class="info-btn" data-info="fatigue_damage">i</button></span>
                     <span class="kv-value" id="val-damage">0.000</span>
                     <span class="kv-unit">%</span>
                 </div>
@@ -312,10 +355,26 @@
             </section>
 
             <section class="card" id="card-tilt">
-                <h2>Tilt angle</h2>
+                <div class="card-header">
+                    <h2>Tilt angle <button type="button" class="info-btn" data-info="tilt_angle">i</button></h2>
+                </div>
                 <div class="tilt-row">
                     <span class="tilt-value" id="val-tilt">0.0</span>
                     <span class="tilt-unit">&deg;</span>
+                </div>
+                <div id="tilt-gauge" class="tilt-gauge">
+                    <div class="tilt-gauge-track">
+                        <div class="tilt-gauge-zone zone-green" id="tg-zone-green"></div>
+                        <div class="tilt-gauge-zone zone-yellow" id="tg-zone-yellow"></div>
+                        <div class="tilt-gauge-zone zone-red" id="tg-zone-red"></div>
+                        <div class="tilt-gauge-marker" id="tg-marker"></div>
+                    </div>
+                    <div class="tilt-gauge-labels">
+                        <span>0&deg;</span>
+                        <span id="tg-alert">H/500</span>
+                        <span id="tg-severe">H/300</span>
+                        <span id="tg-critical">H/200</span>
+                    </div>
                 </div>
             </section>
 
@@ -326,6 +385,34 @@
 
         </aside>
 
+    </div>
+
+    <div id="info-modal" class="info-modal" aria-hidden="true">
+        <div class="info-modal-backdrop" id="info-modal-backdrop"></div>
+        <div class="info-modal-card" role="dialog" aria-modal="true" aria-labelledby="info-modal-title">
+            <div class="info-modal-head">
+                <h3 id="info-modal-title">Info</h3>
+                <button type="button" id="info-modal-close" class="info-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="info-modal-body">
+                <div class="info-block">
+                    <div class="info-label">What</div>
+                    <div class="info-text" id="info-modal-what"></div>
+                </div>
+                <div class="info-block">
+                    <div class="info-label">Formula</div>
+                    <div class="info-formula" id="info-modal-formula"></div>
+                </div>
+                <div class="info-block">
+                    <div class="info-label">Admissible limit</div>
+                    <div class="info-text" id="info-modal-limit"></div>
+                </div>
+                <div class="info-block">
+                    <div class="info-label">Why it matters</div>
+                    <div class="info-text" id="info-modal-why"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='app.js') }}"></script>

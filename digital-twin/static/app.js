@@ -29,6 +29,9 @@
         disp: document.getElementById("val-disp"),
         torsion: document.getElementById("val-torsion"),
         domFreq: document.getElementById("val-dom-freq"),
+        baselineFreq: document.getElementById("val-baseline-freq"),
+        freqShift: document.getElementById("val-freq-shift"),
+        freqHealthDot: document.getElementById("freq-health-dot"),
 
         selMaterial: document.getElementById("sel-material"),
         headerMaterial: document.getElementById("header-material"),
@@ -69,6 +72,35 @@
         valBHeight: document.getElementById("val-b-height"),
         valBMass: document.getElementById("val-b-mass"),
         ttfHuman: document.getElementById("val-ttf-human"),
+
+        tgZoneGreen: document.getElementById("tg-zone-green"),
+        tgZoneYellow: document.getElementById("tg-zone-yellow"),
+        tgZoneRed: document.getElementById("tg-zone-red"),
+        tgMarker: document.getElementById("tg-marker"),
+        tgAlert: document.getElementById("tg-alert"),
+        tgSevere: document.getElementById("tg-severe"),
+        tgCritical: document.getElementById("tg-critical"),
+
+        wbarStress: document.getElementById("wbar-stress"),
+        wbarFatigue: document.getElementById("wbar-fatigue"),
+        wbarFreq: document.getElementById("wbar-freq"),
+        wbarTilt: document.getElementById("wbar-tilt"),
+        wbarDisp: document.getElementById("wbar-disp"),
+        wvalStress: document.getElementById("wval-stress"),
+        wvalFatigue: document.getElementById("wval-fatigue"),
+        wvalFreq: document.getElementById("wval-freq"),
+        wvalTilt: document.getElementById("wval-tilt"),
+        wvalDisp: document.getElementById("wval-disp"),
+        weightsNote: document.getElementById("weights-note"),
+
+        infoModal: document.getElementById("info-modal"),
+        infoModalBackdrop: document.getElementById("info-modal-backdrop"),
+        infoModalClose: document.getElementById("info-modal-close"),
+        infoModalTitle: document.getElementById("info-modal-title"),
+        infoModalWhat: document.getElementById("info-modal-what"),
+        infoModalFormula: document.getElementById("info-modal-formula"),
+        infoModalLimit: document.getElementById("info-modal-limit"),
+        infoModalWhy: document.getElementById("info-modal-why"),
     };
 
     const local = {
@@ -76,6 +108,10 @@
         swayBuffer: [],
         packetCount: 0,
         connected: false,
+        lastMaterial: "reinforced_concrete",
+        lastStructural: "concrete",
+        lastLimits: { alert: 0, severe: 0, critical: 0 },
+        lastMatrial: null,
     };
 
     function setStatus(cls, text) {
@@ -184,10 +220,6 @@
         }).then(r => r.json());
     }
 
-    function apiDelete(url) {
-        return fetch(url, { method: "DELETE" }).then(r => r.json());
-    }
-
     if (el.resetPeaks) el.resetPeaks.addEventListener("click", resetPeaks);
 
     if (el.selMaterial) {
@@ -265,10 +297,18 @@
         return { floors, floorH, width, depth, stype, height, mass };
     }
 
+    function radToDeg(x) { return x * 180 / Math.PI; }
+
     function repaintBuildingSpec() {
         const s = buildingSpec();
         if (el.valBHeight) el.valBHeight.textContent = s.height.toFixed(1);
         if (el.valBMass) el.valBMass.textContent = (s.mass / 1000).toFixed(1);
+        const alertDeg = radToDeg(Math.atan(1 / 500));
+        const severeDeg = radToDeg(Math.atan(1 / 300));
+        const criticalDeg = radToDeg(Math.atan(1 / 200));
+        updateTiltGauge(0, alertDeg, severeDeg, criticalDeg);
+        local.lastStructural = s.stype;
+        updateWeightsNote();
     }
 
     [el.inBFloors, el.inBFloorHeight, el.inBWidth, el.inBDepth, el.inBStructure].forEach(inp => {
@@ -284,6 +324,11 @@
                 mass: s.mass,
                 width: s.width,
                 depth: s.depth,
+                stories: s.floors,
+                floor_height: s.floorH,
+                plan_width: s.width,
+                plan_depth: s.depth,
+                structural_system: s.stype,
             };
             apiPost("/api/dimensions", body).then(res => {
                 if (res.status === "ok") {
@@ -293,6 +338,189 @@
             }).catch(console.error);
         });
     }
+
+    function updateTiltGauge(tiltMag, alertDeg, severeDeg, criticalDeg) {
+        if (!el.tgMarker || !el.tgZoneGreen || !el.tgZoneYellow || !el.tgZoneRed) return;
+        const scaleMax = Math.max(criticalDeg * 1.2, 0.5);
+        const pct = (deg) => Math.max(0, Math.min(100, (deg / scaleMax) * 100));
+        const gEnd = pct(alertDeg);
+        const yEnd = pct(severeDeg);
+        const rEnd = pct(criticalDeg);
+        el.tgZoneGreen.style.left = "0%";
+        el.tgZoneGreen.style.width = gEnd.toFixed(2) + "%";
+        el.tgZoneYellow.style.left = gEnd.toFixed(2) + "%";
+        el.tgZoneYellow.style.width = Math.max(0, yEnd - gEnd).toFixed(2) + "%";
+        el.tgZoneRed.style.left = yEnd.toFixed(2) + "%";
+        el.tgZoneRed.style.width = Math.max(0, rEnd - yEnd).toFixed(2) + "%";
+        el.tgMarker.style.left = pct(tiltMag).toFixed(2) + "%";
+        if (el.tgAlert) el.tgAlert.textContent = alertDeg.toFixed(3) + "\u00B0";
+        if (el.tgSevere) el.tgSevere.textContent = severeDeg.toFixed(3) + "\u00B0";
+        if (el.tgCritical) el.tgCritical.textContent = criticalDeg.toFixed(3) + "\u00B0";
+        local.lastLimits = { alert: alertDeg, severe: severeDeg, critical: criticalDeg };
+    }
+
+    function updateFreqHealth(dom, base, shiftPct) {
+        if (el.baselineFreq) el.baselineFreq.textContent = base.toFixed(3);
+        if (el.freqShift) el.freqShift.textContent = shiftPct.toFixed(2);
+        if (el.freqHealthDot) {
+            el.freqHealthDot.classList.remove("health-dot-green", "health-dot-yellow", "health-dot-red");
+            let cls = "health-dot-green";
+            if (shiftPct > 15) cls = "health-dot-red";
+            else if (shiftPct > 5) cls = "health-dot-yellow";
+            el.freqHealthDot.classList.add(cls);
+        }
+    }
+
+    function setWeightBar(barEl, valEl, contribution, color) {
+        if (barEl) {
+            barEl.style.width = Math.max(0, Math.min(100, contribution)).toFixed(1) + "%";
+            if (color) barEl.style.background = color;
+        }
+        if (valEl) valEl.textContent = contribution.toFixed(1) + " / 100";
+    }
+
+    function updateWeightsNote() {
+        if (!el.weightsNote) return;
+        el.weightsNote.textContent = "Weights adjusted for " + local.lastMaterial + " / " + local.lastStructural;
+    }
+
+    function updateWeightsPanel(pS, pF, pFr, pT, pD) {
+        setWeightBar(el.wbarStress,  el.wvalStress,  pS,  "var(--warning)");
+        setWeightBar(el.wbarFatigue, el.wvalFatigue, pF,  "var(--danger)");
+        setWeightBar(el.wbarFreq,    el.wvalFreq,    pFr, "var(--accent)");
+        setWeightBar(el.wbarTilt,    el.wvalTilt,    pT,  "#fb923c");
+        setWeightBar(el.wbarDisp,    el.wvalDisp,    pD,  "#a78bfa");
+    }
+
+    const INFO = {
+        tilt_angle: {
+            title: "Tilt Angle",
+            what: "Inclinarea structurii calculată din accelerometru cu compensare gravitațională pe 3 axe.",
+            formula: "tilt_x = atan2(a_y, sqrt(a_x^2 + a_z^2))\ntilt_y = atan2(-a_x, sqrt(a_y^2 + a_z^2))\ntilt_magnitude = sqrt(tilt_x^2 + tilt_y^2)",
+            limit: (s) => "Alert " + s.lAlert + "°, Severe " + s.lSevere + "°, Critical " + s.lCritical + "° (din H/500, H/300, H/200)",
+            why: "Înclinarea excesivă indică o pierdere ireversibilă de verticalitate și un risc crescut de instabilitate globală.",
+        },
+        sway_velocity: {
+            title: "Sway Velocity",
+            what: "Viteza laterală de oscilație, obținută prin integrarea accelerației cu high-pass drift compensation.",
+            formula: "v = ∫ a dt\nv_hp = (τ/(τ+dt)) · (v_hp_prev + v - v_prev)",
+            limit: () => "Depinde de materialul și sistemul structural; urmărește tendința, nu o limită fixă.",
+            why: "Viteze laterale mari semnalează vibrație puternică și posibilă apropiere de rezonanță.",
+        },
+        lateral_displacement: {
+            title: "Lateral Displacement",
+            what: "Deplasarea laterală, prin dublă integrare a accelerației cu high-pass aplicat de două ori.",
+            formula: "v = ∫ a dt  (cu HP)\nu = ∫ v dt  (cu HP)\n|u| = √(u_x² + u_y²)",
+            limit: (s) => "Limită admisă ≈ " + s.dispLim.toFixed(1) + " mm (H/250)",
+            why: "Depășirea limitei de deplasare poate duce la fisurare, pierderi funcționale și în final colaps.",
+        },
+        torsion: {
+            title: "Torsion",
+            what: "Moment torsional estimat din asimetria vectorului de accelerație față de baseline.",
+            formula: "θ = atan2(a_x, a_y) − atan2(a_x0, a_y0)",
+            limit: () => "Tipic < 2° nominal; > 5° indică solicitare critică asimetrică.",
+            why: "Efectele torsionale concentrează eforturile în colțuri și elemente de colț, accelerând ruperea.",
+        },
+        dominant_frequency: {
+            title: "Dominant Frequency",
+            what: "Frecvența dominantă de oscilație extrasă prin FFT (fereastră Hanning, 256 sample-uri).",
+            formula: "X(k) = FFT(hanning(x[n]))\nf_dom = argmax |X(k)|, k>0, f ≤ 50 Hz\nshift% = |f − f_baseline| / f_baseline · 100",
+            limit: (s) => "Baseline " + s.baselineFreq.toFixed(3) + " Hz — shift > 15% indică degradare semnificativă.",
+            why: "Scăderea frecvenței naturale arată pierdere de rigiditate — un indicator precoce de avarie structurală.",
+        },
+        bending_stress: {
+            title: "Bending Stress",
+            what: "Efortul normal maxim produs de momentul încovoietor pe secțiunea clădirii.",
+            formula: "σ = M·c / I\nM = m · a_peak · g · H,  I = b·d³/12,  c = d/2",
+            limit: (s) => "Limită material: " + s.matLimit.toFixed(1) + " MPa (" + s.material + ")",
+            why: "Când σ depășește limita, apar fisuri macroscopice și pierdere rapidă de capacitate portantă.",
+        },
+        shear_stress: {
+            title: "Shear Stress",
+            what: "Efortul tangențial maxim prin formula Jourawski pentru secțiune dreptunghiulară.",
+            formula: "τ = V·Q / (I·b)\nV = m · a_peak · g,  Q = b·(d/2)²/2",
+            limit: (s) => "Limită tangențială ≈ 0.6 × " + s.matLimit.toFixed(1) + " MPa pentru " + s.material,
+            why: "Cedarea la forfecare este bruscă și fragilă — un mod de rupere deosebit de periculos.",
+        },
+        stress_ratio: {
+            title: "Stress Ratio",
+            what: "Raportul dintre efortul maxim și limita materialului (yield sau compressive).",
+            formula: "ratio = max(σ, τ) / f_limit",
+            limit: (s) => "f_limit = " + s.matLimit.toFixed(1) + " MPa — țintă < 0.5, critical > 0.75.",
+            why: "Raportul exprimă cât de aproape ești de cedare — baza oricărei verificări la stare limită ultimă.",
+        },
+        fatigue_damage: {
+            title: "Fatigue Damage (Miner)",
+            what: "Degradare cumulată prin regula lui Miner folosind curba S-N a materialului.",
+            formula: "N_i = N_ref · (σ_ref / σ_i)^m\nD = Σ n_i / N_i",
+            limit: (s) => "D = 1.0 înseamnă cedare. Material: " + s.material + " (m=" + s.snSlope + ")",
+            why: "Oboseala apare sub solicitări repetate și duce la rupere chiar sub limita elastică.",
+        },
+        integrity_score: {
+            title: "Integrity Score",
+            what: "Scor compozit ponderat (0–100) care pornește de la 100 și scade cu fiecare contribuție de risc.",
+            formula: "I = 100 − Σ w_i · p_i\nw depinde de material și sistem structural",
+            limit: () => "≥80 nominal, 60–80 watch, 40–60 warning, 20–40 critical, <20 evacuate.",
+            why: "Este indicatorul unic de sănătate care agregă toate semnalele într-o decizie acționabilă.",
+        },
+        time_to_failure: {
+            title: "Time to Failure",
+            what: "Estimarea timpului rămas până la D=1, pe baza ratei de creștere a fatigue damage din ultimele 60s.",
+            formula: "damage_rate = (D(t) − D(t−60s)) / 60\nTTF = (1 − D) / damage_rate",
+            limit: () => "Depinde de regimul de solicitare curent — se recalculează continuu.",
+            why: "Permite planificarea acțiunilor (evacuare, oprire) înainte ca cedarea să devină iminentă.",
+        },
+    };
+
+    function buildInfoContext() {
+        const snap = local.lastSnap || {};
+        const alertDeg = num(local.lastLimits.alert, radToDeg(Math.atan(1 / 500)));
+        const severeDeg = num(local.lastLimits.severe, radToDeg(Math.atan(1 / 300)));
+        const criticalDeg = num(local.lastLimits.critical, radToDeg(Math.atan(1 / 200)));
+        const matLimitRaw = num(snap.yield_strength, 0);
+        return {
+            lAlert: alertDeg.toFixed(3),
+            lSevere: severeDeg.toFixed(3),
+            lCritical: criticalDeg.toFixed(3),
+            dispLim: num(snap.disp_limit_mm, 40.0),
+            material: snap.active_material || local.lastMaterial,
+            matLimit: matLimitRaw,
+            baselineFreq: num(snap.baseline_frequency_hz, 0),
+            snSlope: num(snap.sn_slope, "?"),
+        };
+    }
+
+    function openInfo(key) {
+        const entry = INFO[key];
+        if (!entry || !el.infoModal) return;
+        const ctx = buildInfoContext();
+        if (el.infoModalTitle) el.infoModalTitle.textContent = entry.title;
+        if (el.infoModalWhat) el.infoModalWhat.textContent = entry.what;
+        if (el.infoModalFormula) el.infoModalFormula.textContent = entry.formula;
+        if (el.infoModalLimit) el.infoModalLimit.textContent = typeof entry.limit === "function" ? entry.limit(ctx) : entry.limit;
+        if (el.infoModalWhy) el.infoModalWhy.textContent = entry.why;
+        el.infoModal.classList.add("open");
+        el.infoModal.setAttribute("aria-hidden", "false");
+    }
+
+    function closeInfo() {
+        if (!el.infoModal) return;
+        el.infoModal.classList.remove("open");
+        el.infoModal.setAttribute("aria-hidden", "true");
+    }
+
+    document.addEventListener("click", (e) => {
+        const t = e.target;
+        if (t instanceof HTMLElement && t.classList.contains("info-btn")) {
+            const key = t.getAttribute("data-info");
+            if (key) openInfo(key);
+        }
+    });
+    if (el.infoModalBackdrop) el.infoModalBackdrop.addEventListener("click", closeInfo);
+    if (el.infoModalClose) el.infoModalClose.addEventListener("click", closeInfo);
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeInfo();
+    });
 
     setStatus("status-disconnected", "Disconnected");
 
@@ -319,6 +547,7 @@
 
     socket.on("sensor_data", function (d) {
         if (!d) return;
+        local.lastSnap = d;
         local.packetCount += 1;
 
         const ax = num(d.ax, 0), ay = num(d.ay, 0), az = num(d.az, 0);
@@ -327,7 +556,15 @@
         updateAxisValue(el.valZ, az);
         updatePeaks(ax, ay, az);
         updateSparkline(ax);
-        if (el.valTilt) el.valTilt.textContent = num(d.tilt_x, 0).toFixed(1);
+        const tiltX = num(d.tilt_x, 0);
+        const tiltY = num(d.tilt_y, 0);
+        const tiltMag = num(d.tilt_magnitude, Math.hypot(tiltX, tiltY));
+        if (el.valTilt) el.valTilt.textContent = tiltMag.toFixed(2);
+
+        const alertDeg = num(d.tilt_limit_alert_deg, radToDeg(Math.atan(1 / 500)));
+        const severeDeg = num(d.tilt_limit_severe_deg, radToDeg(Math.atan(1 / 300)));
+        const criticalDeg = num(d.tilt_limit_critical_deg, radToDeg(Math.atan(1 / 200)));
+        updateTiltGauge(tiltMag, alertDeg, severeDeg, criticalDeg);
 
         if (el.swayVelX) el.swayVelX.textContent = num(d.sway_velocity_x, 0).toFixed(4);
         if (el.swayVelY) el.swayVelY.textContent = num(d.sway_velocity_y, 0).toFixed(4);
@@ -338,18 +575,35 @@
             el.torsion.className = "kv-value " + (Math.abs(torsion) > 5 ? "text-critical" : (Math.abs(torsion) > 2 ? "text-warning" : "text-safe"));
         }
 
-        if (el.domFreq) el.domFreq.textContent = num(d.dominant_frequency, 0).toFixed(3);
+        const dom = num(d.dominant_frequency, 0);
+        const base = num(d.baseline_frequency_hz, 0);
+        const shift = num(d.freq_shift_pct, 0);
+        if (el.domFreq) el.domFreq.textContent = dom.toFixed(3);
+        updateFreqHealth(dom, base, shift);
 
         if (typeof d.active_material === "string") {
             if (el.headerMaterial) el.headerMaterial.textContent = d.active_material;
             if (el.selMaterial && el.selMaterial.value !== d.active_material) {
                 el.selMaterial.value = d.active_material;
             }
+            local.lastMaterial = d.active_material;
         }
+        if (typeof d.structural_system === "string") {
+            local.lastStructural = d.structural_system;
+        }
+        updateWeightsNote();
+
         if (el.yieldVal) el.yieldVal.textContent = num(d.yield_strength, 0).toFixed(1);
         if (el.emod) el.emod.textContent = num(d.elastic_modulus, 0).toFixed(1);
         if (el.fatigue) el.fatigue.textContent = num(d.fatigue_limit, 0).toFixed(1);
         if (el.damping) el.damping.textContent = num(d.damping_ratio, 0).toFixed(3);
+
+        const pS = num(d.penalty_stress, 0);
+        const pF = num(d.penalty_fatigue, 0);
+        const pFr = num(d.penalty_freq, 0);
+        const pT = num(d.penalty_tilt, 0);
+        const pD = num(d.penalty_disp, 0);
+        updateWeightsPanel(pS, pF, pFr, pT, pD);
 
         if (displayState.scenarioActive) return;
 
@@ -404,8 +658,8 @@
                 if (el.ttfHuman) {
                     const days = Math.floor(t / 24);
                     const hours = Math.round(t % 24);
-                    if (days > 0) el.ttfHuman.textContent = `~${days} days, ${hours} hrs`;
-                    else el.ttfHuman.textContent = `~${hours} hrs remaining`;
+                    if (days > 0) el.ttfHuman.textContent = "~" + days + " days, " + hours + " hrs";
+                    else el.ttfHuman.textContent = "~" + hours + " hrs remaining";
                 }
             }
         }
@@ -415,8 +669,8 @@
         }
         if (el.projStress) el.projStress.textContent = num(d.projected_stress, 0).toFixed(2);
 
-        displayState.tiltX = num(d.tilt_x, 0);
-        displayState.tiltY = num(d.tilt_y, 0);
+        displayState.tiltX = tiltX;
+        displayState.tiltY = tiltY;
         displayState.swayMag = Math.hypot(num(d.sway_velocity_x, 0), num(d.sway_velocity_y, 0));
         displayState.integrity = num(d.integrity_score, 100);
         displayState.damage = num(d.damage_percent, 0);
@@ -516,7 +770,7 @@
             undefined,
             (err) => {
                 console.error("OBJ load failed:", err);
-                if (loadingEl) loadingEl.textContent = "OBJ load failed — see console";
+                if (loadingEl) loadingEl.textContent = "OBJ load failed - see console";
                 const fallback = new THREE.Mesh(
                     new THREE.BoxGeometry(3, 7, 3),
                     material
@@ -589,7 +843,7 @@
 
         function render() {
             requestAnimationFrame(render);
-            const dt = clock.getDelta();
+            clock.getDelta();
             const now = clock.elapsedTime;
 
             smoothed.tiltX = lerp(smoothed.tiltX, displayState.tiltX, 0.06);
